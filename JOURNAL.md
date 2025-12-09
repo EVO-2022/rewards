@@ -326,3 +326,147 @@ Customer purchases → Webhook fires → Points minted → Balance tracked → C
 
 **This journal is the source of truth for project status. Update regularly as work progresses.**
 
+---
+
+## 📅 Change Log (Continued)
+
+### 2024-12-19 (Evening) - Docker & Railway Deployment Work
+
+#### Completed Work
+
+1. **Docker Setup for Production**
+   - Created multi-stage `Dockerfile` (Debian Bullseye base for Prisma compatibility)
+   - Created `docker-compose.yml` for local development
+   - Fixed OpenSSL compatibility issues (switched from Alpine to Debian)
+   - Configured for Railway and Azure deployment
+   - **Files:** `Dockerfile`, `docker-compose.yml`, `.env.example`
+
+2. **Azure Migration Infrastructure**
+   - Created Bicep infrastructure template (`infra/azure/main.bicep`)
+   - Created GitHub Actions workflow for Azure deployment (`.github/workflows/azure-deploy.yml`)
+   - Created comprehensive migration guide (`AZURE_MIGRATION.md`)
+   - Synchronized environment variables across all configs
+
+3. **MVP Smoke Test Implementation**
+   - Created end-to-end smoke test script (`scripts/mvp-smoke-test.ts`)
+   - Tests: Brand creation → Points issuance → Balance check → Redemption
+   - Added `npm run smoke:mvp` script
+   - Fixed TypeScript compatibility issues
+   - **Status:** Script complete, blocked by deployment issue
+
+4. **Authentication Bypass for Smoke Testing**
+   - Implemented global auth kill switch (`SMOKE_TEST_BYPASS=true`)
+   - Created test route: `POST /api/__test/create-brand`
+   - Added path-based bypass middleware (runs before auth)
+   - Updated controller to handle smoke test mode
+   - Test route creates test user in database before brand creation
+   - **Files Modified:**
+     - `src/app.ts` - Global auth bypass, test route
+     - `src/middleware/auth.ts` - Bypass logic in authenticate & requireBrandAccess
+     - `src/controllers/brandController.ts` - Smoke test user handling
+     - `scripts/mvp-smoke-test.ts` - Updated to use test route
+
+5. **Database Migration Automation Attempts**
+   - Updated `Dockerfile` CMD to run migrations on startup
+   - Updated `package.json` start script to run migrations
+   - Installed Prisma CLI in production Docker image
+   - **Status:** ❌ NOT WORKING - Migrations not executing on Railway
+
+#### Current Blocking Issue: Database Migrations Not Running on Railway
+
+**Problem:**
+- Railway deployment succeeds, but database tables don't exist
+- Error: `The table 'public.User' does not exist in the current database`
+- Prisma migrations are not executing despite multiple attempts
+
+**What We've Tried:**
+
+1. **Dockerfile CMD Approach**
+   ```dockerfile
+   CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+   ```
+   - **Result:** Railway appears to override CMD with `npm start`
+
+2. **package.json Start Script**
+   ```json
+   "start": "prisma migrate deploy && node dist/server.js"
+   ```
+   - **Result:** Still not executing migrations (logs show server starting directly)
+
+3. **Postinstall Hook**
+   ```json
+   "postinstall": "prisma generate"
+   ```
+   - **Result:** Prisma client generates, but migrations don't run
+
+**Current Railway Logs Show:**
+```
+Starting Container
+> rewards@1.0.0 start
+> node dist/server.js
+🚨 GLOBAL AUTH DISABLED FOR SMOKE TEST
+🚀 Server running on port 8080
+```
+
+**Missing from Logs:**
+- No migration output
+- No "Running migrations..." messages
+- No table creation logs
+
+**Hypothesis:**
+- Railway may be caching the old `package.json` start script
+- Railway may have a build cache that's not picking up changes
+- Railway may require a different approach (separate migration step, Railway-specific config)
+- The `prisma migrate deploy` command may be failing silently
+
+**What Needs Investigation:**
+1. Check if Railway has a `railway.json` or similar config that overrides start command
+2. Verify if migrations need to run in a separate Railway service/step
+3. Check Railway build logs for any Prisma-related errors
+4. Consider using Railway's database migration feature if available
+5. May need to manually run migrations via Railway CLI or web terminal
+
+**Files Modified (All Pushed to GitHub):**
+- `Dockerfile` - Migration in CMD, Prisma CLI install
+- `package.json` - Migration in start script, postinstall hook
+- `src/app.ts` - Auth bypass, test route
+- `src/middleware/auth.ts` - Bypass logic
+- `src/controllers/brandController.ts` - Test user handling
+- `scripts/mvp-smoke-test.ts` - Updated endpoint
+
+**Next Steps for Dev Team:**
+1. **Investigate Railway Migration Execution**
+   - Check Railway documentation for migration best practices
+   - Verify if separate migration step is required
+   - Check Railway build/deploy logs for Prisma errors
+   - Consider Railway CLI for manual migration execution
+
+2. **Alternative Approaches to Try:**
+   - Use Railway's database migration feature (if available)
+   - Create separate migration service/container
+   - Use Railway web terminal to run migrations manually
+   - Check if `railway.json` exists and needs configuration
+
+3. **Verify Current State:**
+   - Confirm `SMOKE_TEST_BYPASS=true` is set in Railway environment variables
+   - Verify `DATABASE_URL` is correctly configured in Railway
+   - Check Railway logs for any Prisma-related errors during build/start
+
+4. **Test Once Migrations Work:**
+   - Run smoke test: `npm run smoke:mvp`
+   - Verify test route creates user and brand successfully
+   - Confirm database tables exist after deployment
+
+**Environment Variables Required in Railway:**
+- `SMOKE_TEST_BYPASS=true` (for smoke testing)
+- `DATABASE_URL` (should be auto-set by Railway PostgreSQL)
+- `NODE_ENV=production`
+- `CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `PORT=8080` (or Railway default)
+
+**Repository Status:**
+- All changes pushed to GitHub: `https://github.com/EVO-2022/rewards`
+- Latest commit includes all migration automation attempts
+- Code is ready once migration execution is resolved
+
