@@ -22,11 +22,13 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma
+COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 
 ENV NODE_ENV=production
 ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["node", "dist/server.js"]
+# Run migrations on startup, then start server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
 
