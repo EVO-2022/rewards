@@ -8,6 +8,9 @@ import morgan from "morgan";
 import brandRoutes from "./routes/brandRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
 import pointsRoutes from "./routes/pointsRoutes";
+import * as brandController from "./controllers/brandController";
+import { validate } from "./middleware/validation";
+import { z } from "zod";
 
 export function createApp() {
   const app = express();
@@ -70,6 +73,23 @@ app.get("/__dev/balance", async (req, res) => {
     brandId,
     balance,
   });
+});
+
+// 🔒 TEMPORARY TEST ROUTE - Unauthenticated brand creation for smoke testing
+// This bypasses ALL auth and admin middleware
+// TODO: Remove after smoke test verification
+const createBrandSchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
+  description: z.string().optional(),
+});
+app.post("/__test/create-brand", validate(createBrandSchema), async (req, res) => {
+  // Inject fake auth for controller (controller expects req.auth.userId)
+  (req as any).auth = {
+    userId: "test-smoke-user-id",
+    email: "test@smoke.test",
+  };
+  return brandController.createBrand(req, res);
 });
   return app;
 }
