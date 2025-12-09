@@ -14,7 +14,8 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "smoke:mvp": "ts-node scripts/mvp-smoke-test.ts"
   },
   "keywords": [
     "rewards",

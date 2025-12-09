@@ -1,0 +1,34 @@
+name: Deploy to Azure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.AZURE_REGISTRY }}
+          username: ${{ secrets.AZURE_USERNAME }}
+          password: ${{ secrets.AZURE_PASSWORD }}
+
+      - run: |
+          docker build -t ${{ secrets.AZURE_IMAGE }} .
+          docker push ${{ secrets.AZURE_IMAGE }}
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - run: |
+          az deployment group create \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --template-file infra/azure/main.bicep \
+            --parameters appName=${{ secrets.AZURE_APP_NAME }} \
+                         imageName=${{ secrets.AZURE_IMAGE }} \
+                         postgresAdmin=${{ secrets.AZURE_DB_USER }} \
+                         postgresPassword=${{ secrets.AZURE_DB_PASS }}
+

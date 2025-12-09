@@ -18,7 +18,15 @@ export const authenticate =
         };
         return next();
       }
-    : requireAuth();
+    : (req: any, res: Response, next: NextFunction) => {
+        // 🔒 SMOKE TEST BYPASS - Only active when explicitly enabled
+        if (process.env.SMOKE_TEST_BYPASS === "true") {
+          console.log("✅ SMOKE_TEST_BYPASS ACTIVE");
+          return next();
+        }
+        // Normal Clerk authentication
+        return requireAuth()(req, res, next);
+      };
 
 /**
  * ✅ DEV USER SYNC BYPASS
