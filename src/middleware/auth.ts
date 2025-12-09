@@ -102,6 +102,12 @@ export const syncUser = async (req: any, res: Response, next: NextFunction) => {
 export const requireBrandAccess = (requiredRole?: BrandRole) => {
   return async (req: any, res: Response, next: NextFunction) => {
     try {
+      // 🔒 SMOKE TEST BYPASS - Only active when explicitly enabled
+      if (process.env.SMOKE_TEST_BYPASS === "true") {
+        console.log("✅ SMOKE_TEST_ADMIN_BYPASS ACTIVE");
+        return next();
+      }
+
       if (process.env.NODE_ENV === "development") {
         req.brandId = req.params.brandId || req.body.brandId || req.query.brandId || "dev-brand-id";
         req.userRole = "OWNER";
