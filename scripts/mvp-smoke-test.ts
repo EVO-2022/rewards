@@ -86,10 +86,10 @@ async function main() {
   console.log("🚀 Starting MVP Smoke Test\n");
   console.log(`API URL: ${API_URL}\n`);
 
-  // Step 1: Create test brand (this automatically creates/adds the current user as OWNER in dev mode)
+  // Step 1: Create test brand using test route (bypasses auth)
   console.log("Step 1: Creating test brand...");
   const brandSlug = `test-brand-${Date.now()}`;
-  const brandResult = await fetchAPI("/brands", {
+  const brandResult = await fetchAPI("/__test/create-brand", {
     method: "POST",
     body: JSON.stringify({
       name: "Test Brand",

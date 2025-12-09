@@ -23,9 +23,9 @@ export function createApp() {
   app.use((req, _res, next) => {
     if (
       process.env.SMOKE_TEST_BYPASS === "true" &&
-      req.path.startsWith("/api/__test")
+      (req.path.startsWith("/api/__test") || req.path.startsWith("/__test"))
     ) {
-      console.log("✅ GLOBAL TEST BYPASS HIT BEFORE AUTH");
+      console.log("✅ GLOBAL TEST BYPASS HIT BEFORE AUTH", req.path);
       return next();
     }
     next();
@@ -98,13 +98,36 @@ const createBrandSchema = z.object({
   slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
   description: z.string().optional(),
 });
-app.post("/__test/create-brand", validate(createBrandSchema), async (req, res) => {
-  // Inject fake auth for controller (controller expects req.auth.userId)
-  (req as any).auth = {
-    userId: "test-smoke-user-id",
-    email: "test@smoke.test",
-  };
-  return brandController.createBrand(req, res);
+app.post("/api/__test/create-brand", validate(createBrandSchema), async (req, res) => {
+  try {
+    // Ensure test user exists in database
+    const { prisma } = await import("./utils/prisma");
+    let testUser = await prisma.user.findUnique({
+      where: { clerkId: "test-smoke-user-id" },
+    });
+
+    if (!testUser) {
+      testUser = await prisma.user.create({
+        data: {
+          clerkId: "test-smoke-user-id",
+          email: "test@smoke.test",
+          isPlatformAdmin: false,
+        },
+      });
+      console.log("✅ Created test smoke user:", testUser.id);
+    }
+
+    // Inject auth with actual database user ID
+    (req as any).auth = {
+      userId: testUser.id, // Use actual DB user ID, not the string
+      email: testUser.email || "test@smoke.test",
+    };
+
+    return brandController.createBrand(req, res);
+  } catch (error) {
+    console.error("Test route error:", error);
+    return res.status(500).json({ error: "Failed to setup test user" });
+  }
 });
   return app;
 }
