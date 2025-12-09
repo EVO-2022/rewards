@@ -21,12 +21,14 @@ export function createApp() {
 
   // 🔒 SMOKE TEST BYPASS - Must run BEFORE auth middleware
   app.use((req, _res, next) => {
-    if (
-      process.env.SMOKE_TEST_BYPASS === "true" &&
-      (req.path.startsWith("/api/__test") || req.path.startsWith("/__test"))
-    ) {
-      console.log("✅ GLOBAL TEST BYPASS HIT BEFORE AUTH", req.path);
-      return next();
+    if (process.env.SMOKE_TEST_BYPASS === "true") {
+      const isTestPath = req.path.startsWith("/api/__test") || 
+                         req.path.startsWith("/__test") ||
+                         req.originalUrl?.includes("/__test");
+      if (isTestPath) {
+        console.log("✅ GLOBAL TEST BYPASS HIT BEFORE AUTH", { path: req.path, originalUrl: req.originalUrl });
+        return next();
+      }
     }
     next();
   });
@@ -41,6 +43,52 @@ export function createApp() {
   // Health check
   app.get("/health", (_, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // 🔒 TEMPORARY TEST ROUTE - Must be BEFORE other /api routes to avoid conflicts
+  const createBrandSchema = z.object({
+    name: z.string().min(1),
+    slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
+    description: z.string().optional(),
+  });
+  app.post("/api/__test/create-brand", validate(createBrandSchema), async (req, res) => {
+    try {
+      console.log("🔧 TEST ROUTE HIT:", { 
+        path: req.path, 
+        originalUrl: req.originalUrl,
+        method: req.method,
+        body: req.body,
+        bypass: process.env.SMOKE_TEST_BYPASS 
+      });
+      // Ensure test user exists in database
+      const { prisma } = await import("./utils/prisma");
+      let testUser = await prisma.user.findUnique({
+        where: { clerkId: "test-smoke-user-id" },
+      });
+
+      if (!testUser) {
+        testUser = await prisma.user.create({
+          data: {
+            clerkId: "test-smoke-user-id",
+            email: "test@smoke.test",
+            isPlatformAdmin: false,
+          },
+        });
+        console.log("✅ Created test smoke user:", testUser.id);
+      }
+
+      // Inject auth with actual database user ID
+      (req as any).auth = {
+        userId: testUser.id, // Use actual DB user ID, not the string
+        email: testUser.email || "test@smoke.test",
+      };
+
+      console.log("🔧 Calling brandController.createBrand with userId:", testUser.id);
+      return brandController.createBrand(req, res);
+    } catch (error) {
+      console.error("❌ Test route error:", error);
+      return res.status(500).json({ error: "Failed to setup test user", details: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   // API routes
@@ -90,44 +138,5 @@ app.get("/__dev/balance", async (req, res) => {
   });
 });
 
-// 🔒 TEMPORARY TEST ROUTE - Unauthenticated brand creation for smoke testing
-// This bypasses ALL auth and admin middleware
-// TODO: Remove after smoke test verification
-const createBrandSchema = z.object({
-  name: z.string().min(1),
-  slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
-  description: z.string().optional(),
-});
-app.post("/api/__test/create-brand", validate(createBrandSchema), async (req, res) => {
-  try {
-    // Ensure test user exists in database
-    const { prisma } = await import("./utils/prisma");
-    let testUser = await prisma.user.findUnique({
-      where: { clerkId: "test-smoke-user-id" },
-    });
-
-    if (!testUser) {
-      testUser = await prisma.user.create({
-        data: {
-          clerkId: "test-smoke-user-id",
-          email: "test@smoke.test",
-          isPlatformAdmin: false,
-        },
-      });
-      console.log("✅ Created test smoke user:", testUser.id);
-    }
-
-    // Inject auth with actual database user ID
-    (req as any).auth = {
-      userId: testUser.id, // Use actual DB user ID, not the string
-      email: testUser.email || "test@smoke.test",
-    };
-
-    return brandController.createBrand(req, res);
-  } catch (error) {
-    console.error("Test route error:", error);
-    return res.status(500).json({ error: "Failed to setup test user" });
-  }
-});
   return app;
 }
