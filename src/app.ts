@@ -2,8 +2,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 
-// 🔴 AUTH TEMPORARILY DISABLED FOR LOCAL DEV
-// import { authenticate } from "./middleware/auth";
+import { authenticate } from "./middleware/auth";
 
 import brandRoutes from "./routes/brandRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
@@ -20,8 +19,15 @@ export function createApp() {
   app.use(express.json());
   app.use(morgan("dev"));
 
-  // 🔴 DISABLED GLOBAL AUTH FOR LOCAL DEV
-  // app.use(authenticate);
+  // Global auth with smoke test bypass
+  app.use((req, res, next) => {
+    // 🔒 SMOKE TEST BYPASS - Only active when explicitly enabled
+    if (process.env.SMOKE_TEST_BYPASS === "true" && (req.path.startsWith("/__test") || req.path.startsWith("/api/__test"))) {
+      console.log("✅ GLOBAL SMOKE TEST BYPASS ACTIVE");
+      return next();
+    }
+    return authenticate(req, res, next);
+  });
 
   // Health check
   app.get("/health", (_, res) => {
