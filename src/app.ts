@@ -19,15 +19,20 @@ export function createApp() {
   app.use(express.json());
   app.use(morgan("dev"));
 
-  // Global auth with smoke test bypass
-  app.use((req, res, next) => {
-    // 🔒 SMOKE TEST BYPASS - Only active when explicitly enabled
-    if (process.env.SMOKE_TEST_BYPASS === "true" && (req.path.startsWith("/__test") || req.path.startsWith("/api/__test"))) {
-      console.log("✅ GLOBAL SMOKE TEST BYPASS ACTIVE");
+  // 🔒 SMOKE TEST BYPASS - Must run BEFORE auth middleware
+  app.use((req, _res, next) => {
+    if (
+      process.env.SMOKE_TEST_BYPASS === "true" &&
+      req.path.startsWith("/api/__test")
+    ) {
+      console.log("✅ GLOBAL TEST BYPASS HIT BEFORE AUTH");
       return next();
     }
-    return authenticate(req, res, next);
+    next();
   });
+
+  // Global auth middleware
+  app.use(authenticate);
 
   // Health check
   app.get("/health", (_, res) => {
