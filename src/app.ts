@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 
-import { authenticate } from "./middleware/auth";
+import { authenticate, syncUser } from "./middleware/auth";
 
 import brandRoutes from "./routes/brandRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
@@ -19,47 +19,60 @@ export function createApp() {
   app.use(express.json());
   app.use(morgan("dev"));
 
-  // 🔒 SMOKE TEST BYPASS - Must run BEFORE auth middleware
-  app.use((req, _res, next) => {
-    if (process.env.SMOKE_TEST_BYPASS === "true") {
-      const isTestPath = req.path.startsWith("/api/__test") || 
-                         req.path.startsWith("/__test") ||
-                         req.originalUrl?.includes("/__test");
-      if (isTestPath) {
-        console.log("✅ GLOBAL TEST BYPASS HIT BEFORE AUTH", { path: req.path, originalUrl: req.originalUrl });
-        return next();
-      }
+  // Authentication middleware - applies to all routes except health check and test routes
+  app.use((req, res, next) => {
+    // Skip auth for health check
+    if (req.path === "/health") {
+      return next();
     }
-    next();
+    
+    // Skip auth for test routes ONLY when SMOKE_TEST_BYPASS is enabled
+    if (process.env.SMOKE_TEST_BYPASS === "true" && 
+        (req.path.startsWith("/api/__test") || req.path.startsWith("/__test"))) {
+      console.log("⚠️ TEST ROUTE BYPASS (SMOKE_TEST_BYPASS=true):", req.path);
+      return next();
+    }
+    
+    // Apply authentication to all other routes
+    return authenticate(req, res, next);
   });
 
-  // 🚨 HARD GLOBAL AUTH KILL SWITCH - TEMPORARY FOR SMOKE TESTING
-  if (process.env.SMOKE_TEST_BYPASS !== "true") {
-    app.use(authenticate);
-  } else {
-    console.log("🚨 GLOBAL AUTH DISABLED FOR SMOKE TEST");
-  }
+  // Sync authenticated users to database (runs after auth)
+  app.use((req, res, next) => {
+    // Skip sync for health check and test routes
+    if (req.path === "/health" || 
+        (process.env.SMOKE_TEST_BYPASS === "true" && 
+         (req.path.startsWith("/api/__test") || req.path.startsWith("/__test")))) {
+      return next();
+    }
+    // Only sync if user is authenticated
+    if (req.auth?.userId) {
+      return syncUser(req, res, next);
+    }
+    return next();
+  });
 
   // Health check
   app.get("/health", (_, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // 🔒 TEMPORARY TEST ROUTE - Must be BEFORE other /api routes to avoid conflicts
+  // 🔒 TEST ROUTE - Only works when SMOKE_TEST_BYPASS=true (for automated testing)
   const createBrandSchema = z.object({
     name: z.string().min(1),
     slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
     description: z.string().optional(),
   });
   app.post("/api/__test/create-brand", validate(createBrandSchema), async (req, res) => {
+    // This route is only accessible when SMOKE_TEST_BYPASS=true
+    // The auth middleware above will skip auth for this path when the env var is set
     try {
       console.log("🔧 TEST ROUTE HIT:", { 
         path: req.path, 
-        originalUrl: req.originalUrl,
         method: req.method,
-        body: req.body,
         bypass: process.env.SMOKE_TEST_BYPASS 
       });
+      
       // Ensure test user exists in database
       const { prisma } = await import("./utils/prisma");
       let testUser = await prisma.user.findUnique({
@@ -79,15 +92,17 @@ export function createApp() {
 
       // Inject auth with actual database user ID
       (req as any).auth = {
-        userId: testUser.id, // Use actual DB user ID, not the string
+        userId: testUser.id,
         email: testUser.email || "test@smoke.test",
       };
 
-      console.log("🔧 Calling brandController.createBrand with userId:", testUser.id);
       return brandController.createBrand(req, res);
     } catch (error) {
       console.error("❌ Test route error:", error);
-      return res.status(500).json({ error: "Failed to setup test user", details: error instanceof Error ? error.message : String(error) });
+      return res.status(500).json({ 
+        error: "Failed to setup test user", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 
