@@ -120,20 +120,17 @@ async function main() {
   log(`Brand created: ${brandId}`, true);
   console.log(`   Brand ID: ${brandId}\n`);
 
-  // Step 2: Get user ID from brand (user is auto-added as OWNER during brand creation)
-  console.log("Step 2: Getting user information from brand...");
-  const brandDetailsResult = await fetchAPI(`/brands/${brandId}`);
+  // Step 2: Extract user ID from brand creation response (user is auto-added as OWNER)
+  console.log("Step 2: Extracting user information from brand creation response...");
   
-  if (!brandDetailsResult.success) {
-    log(`Failed to get brand details: ${brandDetailsResult.error}`, false);
-    console.log("\n❌ Test failed at getting user step");
-    process.exit(1);
-  }
-
-  const userId = brandDetailsResult.data?.members?.[0]?.user?.id || brandDetailsResult.data?.members?.[0]?.userId;
+  // Brand creation response includes members with user info
+  const brandData = brandResult.data;
+  const userId = brandData?.members?.[0]?.user?.id || brandData?.members?.[0]?.userId;
+  const memberId = brandData?.members?.[0]?.id;
   
   if (!userId) {
-    log("Could not determine user ID from brand", false);
+    log("Could not determine user ID from brand creation response", false);
+    console.log("   Brand response structure:", JSON.stringify(brandData, null, 2));
     console.log("\n❌ Test failed: User ID required for next steps");
     process.exit(1);
   }
@@ -144,13 +141,12 @@ async function main() {
 
   // Step 3: User is already added to brand (auto-added during creation)
   console.log("Step 3: Verifying user membership...");
-  const memberId = brandDetailsResult.data?.members?.[0]?.id;
   if (memberId) {
     summary.memberId = memberId;
     log(`User is member of brand: ${memberId}`, true);
     console.log(`   Member ID: ${memberId}\n`);
   } else {
-    log("User membership not found", false);
+    log("User membership not found in response", false);
   }
 
   // Step 4: Issue points to user
