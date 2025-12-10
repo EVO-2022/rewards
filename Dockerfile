@@ -16,12 +16,18 @@ FROM node:20-bullseye AS runner
 
 WORKDIR /app
 
+# Copy package files first
 COPY package*.json ./
+
+# Copy prisma schema before npm install (needed for postinstall script)
+COPY prisma ./prisma
+
+# Install dependencies (postinstall will run prisma generate)
 RUN npm install --omit=dev && npm install prisma --save
 
+# Copy built application and generated Prisma client from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY prisma ./prisma
 COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 
 ENV NODE_ENV=production
