@@ -3,9 +3,14 @@ FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
+# Copy package files and prisma schema before npm install (needed for postinstall script)
 COPY package*.json ./
+COPY prisma ./prisma
+
+# Install dependencies (postinstall will run prisma generate)
 RUN npm install
 
+# Copy rest of the application
 COPY . .
 
 RUN npx prisma generate
