@@ -166,3 +166,218 @@ export const deleteBrand = async (req: Request, res: Response) => {
   }
 };
 
+export const getMyBrands = async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const memberships = await prisma.brandMember.findMany({
+      where: { userId },
+      include: {
+        brand: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    const brands = memberships.map((m) => ({
+      id: m.brand.id,
+      name: m.brand.name,
+      slug: m.brand.slug,
+      description: m.brand.description,
+      isActive: m.brand.isActive,
+      createdAt: m.brand.createdAt.toISOString(),
+      role: m.role,
+      joinedAt: m.createdAt.toISOString(),
+    }));
+
+    res.json(brands);
+  } catch (error) {
+    console.error("Get my brands error:", error);
+    res.status(500).json({ error: "Failed to fetch brands" });
+  }
+};
+
+export const getBrandSummary = async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth?.userId;
+    const { brandId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Check if brand exists and user is a member
+    const brand = await prisma.brand.findUnique({
+      where: { id: brandId },
+    });
+
+    if (!brand) {
+      return res.status(404).json({ error: "Brand not found" });
+    }
+
+    const membership = await prisma.brandMember.findUnique({
+      where: {
+        userId_brandId: {
+          userId,
+          brandId,
+        },
+      },
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Access denied to this brand" });
+    }
+
+    // Get total members count
+    const totalMembers = await prisma.brandMember.count({
+      where: { brandId },
+    });
+
+    // Calculate total points issued (sum of MINT entries)
+    const mintEntries = await prisma.rewardLedger.findMany({
+      where: {
+        brandId,
+        type: "MINT",
+      },
+      select: {
+        amount: true,
+      },
+    });
+
+    const totalPointsIssued = mintEntries.reduce(
+      (sum, entry) => sum + Number(entry.amount),
+      0
+    );
+
+    // Calculate total points redeemed (sum of Redemption.pointsUsed where status is completed)
+    const completedRedemptions = await prisma.redemption.findMany({
+      where: {
+        brandId,
+        status: "completed",
+      },
+      select: {
+        pointsUsed: true,
+      },
+    });
+
+    const totalPointsRedeemed = completedRedemptions.reduce(
+      (sum, redemption) => sum + Number(redemption.pointsUsed),
+      0
+    );
+
+    // Outstanding points = issued - redeemed
+    const outstandingPoints = totalPointsIssued - totalPointsRedeemed;
+
+    res.json({
+      brandId: brand.id,
+      name: brand.name,
+      slug: brand.slug,
+      totalMembers,
+      totalPointsIssued,
+      totalPointsRedeemed,
+      outstandingPoints,
+      createdAt: brand.createdAt.toISOString(),
+    });
+  } catch (error) {
+    console.error("Get brand summary error:", error);
+    res.status(500).json({ error: "Failed to fetch brand summary" });
+  }
+};
+
+export const getBrandMembers = async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth?.userId;
+    const { brandId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Check if brand exists and user is a member
+    const brand = await prisma.brand.findUnique({
+      where: { id: brandId },
+    });
+
+    if (!brand) {
+      return res.status(404).json({ error: "Brand not found" });
+    }
+
+    const membership = await prisma.brandMember.findUnique({
+      where: {
+        userId_brandId: {
+          userId,
+          brandId,
+        },
+      },
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: "Access denied to this brand" });
+    }
+
+    // Parse pagination params
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 20));
+
+    const skip = (page - 1) * pageSize;
+
+    // Get total count
+    const total = await prisma.brandMember.count({
+      where: { brandId },
+    });
+
+    // Get members with user info
+    const members = await prisma.brandMember.findMany({
+      where: { brandId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+      skip,
+      take: pageSize,
+    });
+
+    const membersList = members.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      email: m.user.email || undefined,
+      phone: m.user.phone || undefined,
+      role: m.role,
+      joinedAt: m.createdAt.toISOString(),
+    }));
+
+    res.json({
+      brandId,
+      page,
+      pageSize,
+      total,
+      members: membersList,
+    });
+  } catch (error) {
+    console.error("Get brand members error:", error);
+    res.status(500).json({ error: "Failed to fetch brand members" });
+  }
+};
+

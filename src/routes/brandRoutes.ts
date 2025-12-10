@@ -23,7 +23,10 @@ const updateBrandSchema = z.object({
 // No requireBrandAccess
 
 router.post("/", validate(createBrandSchema), brandController.createBrand);
+router.get("/mine", brandController.getMyBrands);
 router.get("/", brandController.getBrands);
+router.get("/:brandId/summary", brandController.getBrandSummary);
+router.get("/:brandId/members", brandController.getBrandMembers);
 router.get("/:brandId", brandController.getBrand);
 router.patch("/:brandId", validate(updateBrandSchema), brandController.updateBrand);
 router.delete("/:brandId", brandController.deleteBrand);

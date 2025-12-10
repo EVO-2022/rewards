@@ -41,7 +41,10 @@ All API endpoints are prefixed with `/api` except for health check and dev/test 
 |--------|----------------------------------------|----------|------------------------------------|
 | GET    | /health                                | Public   | Health check                       |
 | POST   | /api/brands                            | Required | Create a new brand + owner user    |
+| GET    | /api/brands/mine                       | Required | List current user's brands        |
 | GET    | /api/brands                             | Required | List brands user is member of      |
+| GET    | /api/brands/:brandId/summary            | Required | Get brand dashboard summary        |
+| GET    | /api/brands/:brandId/members           | Required | Get brand members (paginated)      |
 | GET    | /api/brands/:brandId                    | Required | Get brand details                  |
 | PATCH  | /api/brands/:brandId                    | Required | Update brand                       |
 | DELETE | /api/brands/:brandId                    | Required | Delete brand                       |
@@ -150,6 +153,41 @@ curl -X POST "https://rewards-production-a600.up.railway.app/api/brands" \
 
 ---
 
+### GET /api/brands/mine
+
+**Auth:** Required
+
+**Description:**  
+Returns all brands the authenticated user is a member of, with role and join date information. This is a cleaner alternative to `GET /api/brands` with additional membership metadata.
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+    "name": "My Brand",
+    "slug": "my-brand",
+    "description": "Example brand",
+    "isActive": true,
+    "createdAt": "2024-12-19T21:30:00.000Z",
+    "role": "OWNER",
+    "joinedAt": "2024-12-19T21:30:00.000Z"
+  }
+]
+```
+
+**Error responses:**
+- `401` - Unauthorized
+- `500` - Internal server error
+
+**Example:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/brands/mine" \
+  -H "Authorization: Bearer <CLERK_JWT>"
+```
+
+---
+
 ### GET /api/brands
 
 **Auth:** Required
@@ -176,6 +214,92 @@ Returns all brands the authenticated user is a member of.
 **Error responses:**
 - `401` - Unauthorized
 - `500` - Internal server error
+
+---
+
+### GET /api/brands/:brandId/summary
+
+**Auth:** Required
+
+**Description:**  
+Returns a dashboard summary for a brand, including member count and points statistics. Only accessible if the current user is a member of the brand.
+
+**Path parameters:**
+- `brandId` (string, UUID) - The brand ID
+
+**Response (200 OK):**
+```json
+{
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "name": "My Brand",
+  "slug": "my-brand",
+  "totalMembers": 5,
+  "totalPointsIssued": 10000,
+  "totalPointsRedeemed": 2500,
+  "outstandingPoints": 7500,
+  "createdAt": "2024-12-19T21:30:00.000Z"
+}
+```
+
+**Error responses:**
+- `401` - Unauthorized
+- `403` - Access denied (user is not a member of this brand)
+- `404` - Brand not found
+- `500` - Internal server error
+
+**Example:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/brands/9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f/summary" \
+  -H "Authorization: Bearer <CLERK_JWT>"
+```
+
+---
+
+### GET /api/brands/:brandId/members
+
+**Auth:** Required
+
+**Description:**  
+Returns a paginated list of members for a brand. Only accessible if the current user is a member of the brand.
+
+**Path parameters:**
+- `brandId` (string, UUID) - The brand ID
+
+**Query parameters:**
+- `page` (number, optional) - Page number (default: 1, min: 1)
+- `pageSize` (number, optional) - Items per page (default: 20, min: 1, max: 100)
+
+**Response (200 OK):**
+```json
+{
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "page": 1,
+  "pageSize": 20,
+  "total": 5,
+  "members": [
+    {
+      "id": "7e285110-4003-4ade-a7fc-04647fc9695d",
+      "userId": "46d521bb-1d84-4baf-a743-f536e1f5b31d",
+      "email": "user@example.com",
+      "phone": null,
+      "role": "OWNER",
+      "joinedAt": "2024-12-19T21:30:00.000Z"
+    }
+  ]
+}
+```
+
+**Error responses:**
+- `401` - Unauthorized
+- `403` - Access denied (user is not a member of this brand)
+- `404` - Brand not found
+- `500` - Internal server error
+
+**Example:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/brands/9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f/members?page=1&pageSize=20" \
+  -H "Authorization: Bearer <CLERK_JWT>"
+```
 
 ---
 
