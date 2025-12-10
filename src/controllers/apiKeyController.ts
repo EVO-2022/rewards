@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { BrandRole } from "@prisma/client";
-import { generateApiKey } from "../utils/apiKeys";
+import { createBrandApiKeyForBrandId } from "../services/apiKeyService";
 import { z } from "zod";
 
 const createApiKeySchema = z.object({
@@ -45,31 +45,27 @@ export const createApiKey = async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Only brand owners can create API keys" });
     }
 
-    // Generate API key
-    const { rawKey, hash } = generateApiKey();
-
-    // Save to database
-    const apiKey = await prisma.brandApiKey.create({
-      data: {
-        brandId,
-        name: data.name,
-        keyHash: hash,
-        isActive: true,
-      },
-    });
+    // Use shared service to create API key
+    const { brandApiKey, apiKey: rawKey } = await createBrandApiKeyForBrandId(
+      brandId,
+      data.name
+    );
 
     // Return with raw key (only time it's shown)
     res.status(201).json({
-      id: apiKey.id,
-      brandId: apiKey.brandId,
-      name: apiKey.name,
+      id: brandApiKey.id,
+      brandId: brandApiKey.brandId,
+      name: brandApiKey.name,
       apiKey: rawKey, // Only shown once!
-      createdAt: apiKey.createdAt.toISOString(),
+      createdAt: brandApiKey.createdAt.toISOString(),
     });
   } catch (error) {
     console.error("Create API key error:", error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: "Validation error", details: error.errors });
+    }
+    if (error instanceof Error && error.message === "Brand not found") {
+      return res.status(404).json({ error: "Brand not found" });
     }
     res.status(500).json({ error: "Failed to create API key" });
   }

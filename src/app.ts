@@ -185,6 +185,42 @@ export function createApp() {
     }
   });
 
+  // Test route for API key creation
+  app.post("/api/__test/brands/:brandId/api-keys", async (req, res) => {
+    // Guard: only allow when SMOKE_TEST_BYPASS is enabled
+    if (process.env.SMOKE_TEST_BYPASS !== "true") {
+      return res.status(403).json({ error: "Test routes disabled" });
+    }
+
+    try {
+      const { brandId } = req.params;
+      const name = req.body.name || "Test Key";
+
+      // Use shared service to create API key
+      const { createBrandApiKeyForBrandId } = await import("./services/apiKeyService");
+      const { brandApiKey, apiKey } = await createBrandApiKeyForBrandId(brandId, name);
+
+      return res.status(201).json({
+        id: brandApiKey.id,
+        brandId: brandApiKey.brandId,
+        name: brandApiKey.name,
+        isActive: brandApiKey.isActive,
+        createdAt: brandApiKey.createdAt.toISOString(),
+        lastUsedAt: brandApiKey.lastUsedAt?.toISOString() || null,
+        apiKey, // RAW key, only in this response
+      });
+    } catch (error) {
+      console.error("❌ Test route error:", error);
+      if (error instanceof Error && error.message === "Brand not found") {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      return res.status(500).json({
+        error: "Failed to create API key",
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
   // Test route for redemption
   const createRedemptionSchema = z.object({
     userId: z.string().uuid(),
