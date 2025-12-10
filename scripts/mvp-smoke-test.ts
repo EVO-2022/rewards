@@ -88,14 +88,25 @@ async function main() {
 
   // Step 1: Create test brand using test route (bypasses auth)
   console.log("Step 1: Creating test brand...");
-  const brandSlug = `test-brand-${Date.now()}`;
+  // Slug must match: /^[a-z0-9-]+$/ (lowercase letters, numbers, hyphens only)
+  const timestamp = Date.now();
+  const brandSlug = `smoke-test-brand-${timestamp}`;
+  
+  // Brand create schema requires:
+  // - name: string (min 1 char)
+  // - slug: string (min 1 char, regex: /^[a-z0-9-]+$/)
+  // - description: optional string
+  const brandPayload = {
+    name: "Smoke Test Brand",
+    slug: brandSlug,
+    description: "Automated smoke test brand",
+  };
+  
+  console.log(`   Payload: ${JSON.stringify(brandPayload)}`);
+  
   const brandResult = await fetchAPI("/__test/create-brand", {
     method: "POST",
-    body: JSON.stringify({
-      name: "Test Brand",
-      slug: brandSlug,
-      description: "Smoke test brand",
-    }),
+    body: JSON.stringify(brandPayload),
   });
 
   if (!brandResult.success) {
