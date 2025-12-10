@@ -11,6 +11,25 @@ const router = Router();
 // All integration routes require API key auth
 router.use(apiKeyAuth);
 
+// Test endpoint to verify API key authentication
+router.get("/whoami", async (req, res) => {
+  try {
+    const auth = req.integrationAuth;
+    if (!auth) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    res.json({
+      brandId: auth.brandId,
+      apiKeyId: auth.apiKeyId,
+      status: "ok",
+    });
+  } catch (error) {
+    console.error("Whoami error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 const issuePointsSchema = z.object({
   externalUserId: z.string().min(1),
   email: z.string().email().optional(),
@@ -67,7 +86,7 @@ async function findOrCreateIntegrationUser(
 
 router.post("/points/issue", validate(issuePointsSchema), async (req, res) => {
   try {
-    const brandId = req.brandIntegration!.brandId;
+    const brandId = req.integrationAuth!.brandId;
     const data = issuePointsSchema.parse(req.body);
 
     // Find or create user
@@ -111,7 +130,7 @@ router.post("/points/issue", validate(issuePointsSchema), async (req, res) => {
 
 router.get("/users/:externalUserId/balance", async (req, res) => {
   try {
-    const brandId = req.brandIntegration!.brandId;
+    const brandId = req.integrationAuth!.brandId;
     const { externalUserId } = req.params;
 
     // Find user by integration clerkId pattern

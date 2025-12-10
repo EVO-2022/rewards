@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { prisma } from "../utils/prisma";
 import { hashApiKey } from "../utils/apiKeys";
 
-export interface BrandIntegrationContext {
+export interface IntegrationAuthContext {
   brandId: string;
   apiKeyId: string;
 }
@@ -10,21 +10,39 @@ export interface BrandIntegrationContext {
 declare global {
   namespace Express {
     interface Request {
-      brandIntegration?: BrandIntegrationContext;
+      integrationAuth?: IntegrationAuthContext;
     }
   }
 }
 
 /**
  * API Key authentication middleware
- * Validates X-API-Key header and attaches brand context to request
+ * Validates API key from either Authorization: Bearer rk_... or x-api-key header
+ * Attaches brand context to request via req.integrationAuth
  */
 export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const apiKey = req.headers["x-api-key"] as string;
+    // Try to get API key from Authorization header first (Bearer rk_...)
+    let apiKey: string | undefined;
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      if (token.startsWith("rk_")) {
+        apiKey = token;
+      }
+    }
+    
+    // If not found, try x-api-key header (case-insensitive)
+    if (!apiKey) {
+      const xApiKey = req.headers["x-api-key"] as string;
+      if (xApiKey && xApiKey.startsWith("rk_")) {
+        apiKey = xApiKey;
+      }
+    }
 
     if (!apiKey) {
-      return res.status(401).json({ error: "API key required" });
+      return res.status(401).json({ error: "Missing API key" });
     }
 
     // Hash the provided key
@@ -46,7 +64,6 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
 
     // Check if key exists and is active
     if (!brandApiKey || !brandApiKey.isActive) {
-      console.log("❌ Invalid API key attempt");
       return res.status(401).json({ error: "Invalid API key" });
     }
 
@@ -55,26 +72,21 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
       return res.status(403).json({ error: "Brand is inactive or suspended" });
     }
 
-    // Update lastUsedAt (non-blocking)
+    // Update lastUsedAt (non-blocking, ignore errors)
     prisma.brandApiKey
       .update({
         where: { id: brandApiKey.id },
         data: { lastUsedAt: new Date() },
       })
-      .catch((err: any) => {
-        console.error("Failed to update API key lastUsedAt:", err);
+      .catch(() => {
+        // Silently ignore errors updating lastUsedAt
       });
 
-    // Attach brand context to request
-    req.brandIntegration = {
+    // Attach integration auth context to request
+    req.integrationAuth = {
       brandId: brandApiKey.brandId,
       apiKeyId: brandApiKey.id,
     };
-
-    console.log("✅ API key authenticated:", {
-      brandId: brandApiKey.brandId,
-      apiKeyId: brandApiKey.id,
-    });
 
     next();
   } catch (error) {
