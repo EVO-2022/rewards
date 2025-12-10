@@ -82,6 +82,7 @@ model Brand {
   ledgers     RewardLedger[]
   redemptions Redemption[]
   webhookEvents WebhookEvent[]
+  apiKeys     BrandApiKey[]
 
   // Billing (stub)
   stripeCustomerId String?
@@ -204,5 +205,20 @@ model WebhookEvent {
   @@index([eventType])
   @@index([processed])
   @@index([createdAt])
+}
+
+model BrandApiKey {
+  id         String   @id @default(uuid())
+  brand      Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandId    String
+  name       String
+  keyHash    String   @unique
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime?
+
+  @@index([brandId])
+  @@index([keyHash])
+  @@index([isActive])
 }
 

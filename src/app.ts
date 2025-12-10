@@ -7,6 +7,8 @@ import { authenticate, syncUser } from "./middleware/auth";
 import brandRoutes from "./routes/brandRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
 import pointsRoutes from "./routes/pointsRoutes";
+import apiKeyRoutes from "./routes/apiKeyRoutes";
+import integrationRoutes from "./routes/integrationRoutes";
 import * as brandController from "./controllers/brandController";
 import * as pointsController from "./controllers/pointsController";
 import * as redemptionController from "./controllers/redemptionController";
@@ -226,8 +228,10 @@ export function createApp() {
 
   // API routes
   app.use("/api/brands", brandRoutes);
+  app.use("/api/brands", apiKeyRoutes);
   app.use("/api/webhooks", webhookRoutes);
   app.use("/api", pointsRoutes);
+  app.use("/api/integration", integrationRoutes);
 
 // ✅ HARD DEV BYPASS: direct brand access with ZERO auth or middleware
 app.get("/__dev/brands", async (_req, res) => {

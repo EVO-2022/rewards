@@ -61,6 +61,11 @@ All API endpoints are prefixed with `/api` except for health check and dev/test 
 | GET    | /api/:brandId/redemptions/:redemptionId | Required | Get redemption details            |
 | PATCH  | /api/:brandId/redemptions/:redemptionId/cancel | Required | Cancel redemption            |
 | POST   | /api/webhooks/ingest                    | Public   | Ingest webhook (rate limited)     |
+| POST   | /api/brands/:brandId/api-keys            | Required | Create API key (OWNER only)       |
+| GET    | /api/brands/:brandId/api-keys            | Required | List API keys                      |
+| POST   | /api/brands/:brandId/api-keys/:keyId/disable | Required | Disable API key                |
+| POST   | /api/integration/points/issue           | API Key  | Issue points via API key           |
+| GET    | /api/integration/users/:externalUserId/balance | API Key | Get balance via API key      |
 | POST   | /api/__test/create-brand                | Test     | TEST-ONLY: create brand            |
 | POST   | /api/__test/brands/:brandId/points/issue | Test     | TEST-ONLY: issue points            |
 | GET    | /api/__test/brands/:brandId/points/balance/:userId | Test | TEST-ONLY: get balance    |
@@ -843,6 +848,186 @@ Test route for creating redemptions without authentication.
 **Request body:** Same as `POST /api/:brandId/redemptions`
 
 **Response:** Same as `POST /api/:brandId/redemptions`
+
+---
+
+## Brand API Keys
+
+Brand API keys allow external applications to integrate with the Rewards API without requiring Clerk authentication. API keys are scoped to a specific brand and provide access to integration endpoints.
+
+### Creating API Keys
+
+Only brand **OWNER** role can create API keys. API keys are created via the dashboard API:
+
+**POST /api/brands/:brandId/api-keys**
+
+**Auth:** Required (Clerk Bearer token, OWNER role)
+
+**Request body:**
+```json
+{
+  "name": "Production Storefront"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": "api-key-id",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "name": "Production Storefront",
+  "apiKey": "rk_...",  // ⚠️ Only shown once! Store this securely.
+  "createdAt": "2024-12-19T21:30:00.000Z"
+}
+```
+
+**Important:** The raw API key is only returned once when created. Store it securely. If lost, you must create a new key.
+
+### Listing API Keys
+
+**GET /api/brands/:brandId/api-keys**
+
+**Auth:** Required (Clerk Bearer token, brand member)
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "api-key-id",
+    "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+    "name": "Production Storefront",
+    "isActive": true,
+    "createdAt": "2024-12-19T21:30:00.000Z",
+    "lastUsedAt": "2024-12-19T22:00:00.000Z"
+  }
+]
+```
+
+### Disabling API Keys
+
+**POST /api/brands/:brandId/api-keys/:keyId/disable**
+
+**Auth:** Required (Clerk Bearer token, brand member)
+
+**Response (200 OK):**
+```json
+{
+  "id": "api-key-id",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "name": "Production Storefront",
+  "isActive": false,
+  "createdAt": "2024-12-19T21:30:00.000Z",
+  "lastUsedAt": "2024-12-19T22:00:00.000Z"
+}
+```
+
+---
+
+## Integration API
+
+The Integration API allows external applications to issue points and check balances using API keys instead of Clerk authentication. All integration endpoints require the `X-API-Key` header.
+
+### Authentication
+
+Integration endpoints use API key authentication via the `X-API-Key` header:
+
+```bash
+X-API-Key: rk_...
+```
+
+**Error responses:**
+- `401` - API key required (missing header)
+- `401` - Invalid API key (key not found or inactive)
+- `403` - Brand is inactive or suspended
+
+### POST /api/integration/points/issue
+
+**Auth:** API Key (X-API-Key header)
+
+**Description:**  
+Issues points to a user identified by an external user ID. If the user doesn't exist, it will be created automatically. The user is mapped to the brand via the API key's brand scope.
+
+**Request body (JSON):**
+```ts
+{
+  externalUserId: string;  // Required, brand's own user identifier
+  email?: string;         // Optional, for contact/identification
+  amount: number;         // Required, positive number
+  reason?: string;       // Optional, descriptive reason
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "userId": "46d521bb-1d84-4baf-a743-f536e1f5b31d",
+  "externalUserId": "customer_123",
+  "amount": 100,
+  "newBalance": 100,
+  "ledgerEntryId": "ledger-entry-id"
+}
+```
+
+**Error responses:**
+- `400` - Validation error (invalid amount, missing externalUserId)
+- `401` - Invalid or missing API key
+- `500` - Internal server error
+
+**Example:**
+```bash
+curl -X POST "https://rewards-production-a600.up.railway.app/api/integration/points/issue" \
+  -H "X-API-Key: rk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "externalUserId": "customer_123",
+    "email": "customer@example.com",
+    "amount": 100,
+    "reason": "purchase_reward"
+  }'
+```
+
+---
+
+### GET /api/integration/users/:externalUserId/balance
+
+**Auth:** API Key (X-API-Key header)
+
+**Description:**  
+Gets the current point balance for a user identified by an external user ID. If the user doesn't exist, returns balance 0.
+
+**Path parameters:**
+- `externalUserId` (string) - The brand's external user identifier
+
+**Response (200 OK):**
+```json
+{
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "externalUserId": "customer_123",
+  "userId": "46d521bb-1d84-4baf-a743-f536e1f5b31d",
+  "balance": 100
+}
+```
+
+If user doesn't exist:
+```json
+{
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "externalUserId": "customer_123",
+  "userId": null,
+  "balance": 0
+}
+```
+
+**Error responses:**
+- `401` - Invalid or missing API key
+- `500` - Internal server error
+
+**Example:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/users/customer_123/balance" \
+  -H "X-API-Key: rk_..."
+```
 
 ---
 
