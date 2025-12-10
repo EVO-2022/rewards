@@ -153,7 +153,7 @@ async function main() {
   if (userId) {
     console.log("Step 4: Issuing points to user...");
     const pointsAmount = 100;
-    const issueResult = await fetchAPI(`/brands/${brandId}/points/issue`, {
+    const issueResult = await fetchAPI(`/__test/brands/${brandId}/points/issue`, {
       method: "POST",
       body: JSON.stringify({
         userId: userId,
@@ -178,7 +178,7 @@ async function main() {
   // Step 5: Check balance
   if (userId) {
     console.log("Step 5: Checking user balance...");
-    const balanceResult = await fetchAPI(`/brands/${brandId}/points/balance/${userId}`);
+    const balanceResult = await fetchAPI(`/__test/brands/${brandId}/points/balance/${userId}`);
 
     if (!balanceResult.success) {
       log(`Failed to get balance: ${balanceResult.error}`, false);
@@ -194,7 +194,7 @@ async function main() {
     if (summary.balance && summary.balance > 0) {
       console.log("Step 6: Creating redemption...");
       const redemptionAmount = Math.min(50, summary.balance);
-      const redemptionResult = await fetchAPI(`/brands/${brandId}/redemptions`, {
+      const redemptionResult = await fetchAPI(`/__test/brands/${brandId}/redemptions`, {
         method: "POST",
         body: JSON.stringify({
           userId: userId,

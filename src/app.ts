@@ -8,6 +8,8 @@ import brandRoutes from "./routes/brandRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
 import pointsRoutes from "./routes/pointsRoutes";
 import * as brandController from "./controllers/brandController";
+import * as pointsController from "./controllers/pointsController";
+import * as redemptionController from "./controllers/redemptionController";
 import { validate } from "./middleware/validation";
 import { z } from "zod";
 
@@ -101,6 +103,122 @@ export function createApp() {
       console.error("❌ Test route error:", error);
       return res.status(500).json({ 
         error: "Failed to setup test user", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // 🔒 TEST ROUTES FOR POINTS OPERATIONS - Only works when SMOKE_TEST_BYPASS=true
+  const issuePointsSchema = z.object({
+    userId: z.string().uuid(),
+    amount: z.number().positive(),
+    reason: z.string().optional(),
+    metadata: z.record(z.any()).optional(),
+  });
+
+  app.post("/api/__test/brands/:brandId/points/issue", validate(issuePointsSchema), async (req, res) => {
+    try {
+      // Ensure test user exists and inject auth
+      const { prisma } = await import("./utils/prisma");
+      let testUser = await prisma.user.findUnique({
+        where: { clerkId: "test-smoke-user-id" },
+      });
+
+      if (!testUser) {
+        testUser = await prisma.user.create({
+          data: {
+            clerkId: "test-smoke-user-id",
+            email: "test@smoke.test",
+            isPlatformAdmin: false,
+          },
+        });
+      }
+
+      (req as any).auth = {
+        userId: testUser.id,
+        email: testUser.email || "test@smoke.test",
+      };
+
+      return pointsController.issuePoints(req, res);
+    } catch (error) {
+      console.error("❌ Test route error:", error);
+      return res.status(500).json({ 
+        error: "Failed to setup test user for points", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Test route for balance check
+  app.get("/api/__test/brands/:brandId/points/balance/:userId", async (req, res) => {
+    try {
+      // Ensure test user exists and inject auth
+      const { prisma } = await import("./utils/prisma");
+      let testUser = await prisma.user.findUnique({
+        where: { clerkId: "test-smoke-user-id" },
+      });
+
+      if (!testUser) {
+        testUser = await prisma.user.create({
+          data: {
+            clerkId: "test-smoke-user-id",
+            email: "test@smoke.test",
+            isPlatformAdmin: false,
+          },
+        });
+      }
+
+      (req as any).auth = {
+        userId: testUser.id,
+        email: testUser.email || "test@smoke.test",
+      };
+
+      return pointsController.getUserBalance(req, res);
+    } catch (error) {
+      console.error("❌ Test route error:", error);
+      return res.status(500).json({ 
+        error: "Failed to setup test user for balance", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Test route for redemption
+  const createRedemptionSchema = z.object({
+    userId: z.string().uuid(),
+    campaignId: z.string().uuid().optional(),
+    pointsUsed: z.number().positive(),
+    metadata: z.record(z.any()).optional(),
+  });
+
+  app.post("/api/__test/brands/:brandId/redemptions", validate(createRedemptionSchema), async (req, res) => {
+    try {
+      // Ensure test user exists and inject auth
+      const { prisma } = await import("./utils/prisma");
+      let testUser = await prisma.user.findUnique({
+        where: { clerkId: "test-smoke-user-id" },
+      });
+
+      if (!testUser) {
+        testUser = await prisma.user.create({
+          data: {
+            clerkId: "test-smoke-user-id",
+            email: "test@smoke.test",
+            isPlatformAdmin: false,
+          },
+        });
+      }
+
+      (req as any).auth = {
+        userId: testUser.id,
+        email: testUser.email || "test@smoke.test",
+      };
+
+      return redemptionController.createRedemption(req, res);
+    } catch (error) {
+      console.error("❌ Test route error:", error);
+      return res.status(500).json({ 
+        error: "Failed to setup test user for redemption", 
         details: error instanceof Error ? error.message : String(error) 
       });
     }
