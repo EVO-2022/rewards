@@ -1,11 +1,26 @@
 import { Router } from "express";
-import { webhookRateLimit } from "../middleware/rateLimit";
-import * as webhookController from "../controllers/webhookController";
+import { authenticate, syncUser, requireBrandAccess } from "../middleware/auth";
+import {
+  listWebhooks,
+  createWebhook,
+  deleteWebhook,
+} from "../controllers/webhookController";
 
 const router = Router();
 
-// Webhook ingestion - no auth required, but rate limited
-router.post("/ingest", webhookRateLimit, webhookController.ingestWebhook);
+// NOTE: Inbound webhook receiver is not implemented yet.
+// Routes here currently only manage webhook subscriptions.
+
+// All webhook routes require authentication and brand access
+router.use(authenticate);
+router.use(syncUser);
+
+router.get("/:brandId/webhooks", requireBrandAccess(), listWebhooks);
+router.post("/:brandId/webhooks", requireBrandAccess(), createWebhook);
+router.delete(
+  "/:brandId/webhooks/:webhookId",
+  requireBrandAccess(),
+  deleteWebhook
+);
 
 export default router;
-
