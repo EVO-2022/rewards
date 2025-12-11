@@ -1,6 +1,7 @@
 import { BrandSummary, Brand } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
+import { CreateBrandForm } from "@/components/CreateBrandForm";
 import { getFirstBrand } from "@/lib/brandHelper";
 import { adminApiFetch } from "@/lib/rewardsApi";
 
@@ -27,16 +28,17 @@ export default async function DashboardPage() {
       return (
         <div>
           <PageHeader title="Dashboard" />
-          <Card>
-            <div className="text-center py-12">
+          <div className="max-w-2xl">
+            <div className="mb-6">
               <p className="text-lg font-medium text-gray-900 mb-2">
                 You don't have any brands yet.
               </p>
               <p className="text-gray-600">
-                Once you create your first brand, you'll see stats, members, and redemptions here.
+                Create your first brand to get started with managing rewards, members, and API keys.
               </p>
             </div>
-          </Card>
+            <CreateBrandForm />
+          </div>
         </div>
       );
     }

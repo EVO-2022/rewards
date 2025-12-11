@@ -14,7 +14,10 @@ export default function HomePage() {
           <div className="space-y-4">
             <p className="text-gray-500">Please sign in to access the dashboard</p>
             <SignInButton mode="modal">
-              <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button
+                type="button"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
                 Sign In
               </button>
             </SignInButton>
