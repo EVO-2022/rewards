@@ -35,7 +35,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         errorMsg = String(error);
       }
     }
-    console.error("Auth error in layout:", errorMsg);
+    // Log auth errors in development only
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Auth error in layout:", errorMsg);
+    }
     // Redirect to sign-in on auth failure
     redirect("/sign-in");
   }

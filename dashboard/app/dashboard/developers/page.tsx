@@ -69,11 +69,14 @@ export default async function DevelopersPage() {
       }));
     } catch (keysError: unknown) {
       // If API keys fail, log but don't fail the whole page
+      // Use console.warn and only log in development (errors are handled gracefully in UI)
       const keysErrorMsg =
         keysError && typeof keysError === "object" && "message" in keysError
           ? String(keysError.message)
           : String(keysError || "Unknown error");
-      console.error("Failed to fetch API keys:", keysErrorMsg);
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Failed to fetch API keys:", keysErrorMsg);
+      }
       apiKeys = [];
     }
   } catch (err: unknown) {
