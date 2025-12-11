@@ -1,16 +1,8 @@
 import { adminApiFetch } from "@/lib/rewardsApi";
-import { Brand, Redemption } from "@/lib/types";
+import { Redemption } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
-
-async function getBrands(): Promise<Brand[]> {
-  try {
-    return await adminApiFetch<Brand[]>("/brands/mine");
-  } catch (error) {
-    console.error("Failed to fetch brands:", error);
-    return [];
-  }
-}
+import { getFirstBrand } from "@/lib/brandHelper";
 
 async function getRedemptions(brandId: string): Promise<Redemption[]> {
   try {
@@ -22,8 +14,7 @@ async function getRedemptions(brandId: string): Promise<Redemption[]> {
 }
 
 export default async function RedemptionsPage() {
-  const brands = await getBrands();
-  const selectedBrand = brands[0];
+  const selectedBrand = await getFirstBrand();
 
   if (!selectedBrand) {
     return (

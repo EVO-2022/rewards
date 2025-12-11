@@ -1,19 +1,11 @@
-import { adminApiFetch } from "@/lib/rewardsApi";
-import { Brand, BrandSummary } from "@/lib/types";
+import { BrandSummary } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
-
-async function getBrands(): Promise<Brand[]> {
-  try {
-    return await adminApiFetch<Brand[]>("/brands/mine");
-  } catch (error) {
-    console.error("Failed to fetch brands:", error);
-    return [];
-  }
-}
+import { getFirstBrand } from "@/lib/brandHelper";
 
 async function getBrandSummary(brandId: string): Promise<BrandSummary | null> {
   try {
+    const { adminApiFetch } = await import("@/lib/rewardsApi");
     return await adminApiFetch<BrandSummary>(`/brands/${brandId}/summary`);
   } catch (error) {
     console.error("Failed to fetch brand summary:", error);
@@ -22,8 +14,7 @@ async function getBrandSummary(brandId: string): Promise<BrandSummary | null> {
 }
 
 export default async function DashboardPage() {
-  const brands = await getBrands();
-  const selectedBrand = brands[0]; // For MVP, use first brand
+  const selectedBrand = await getFirstBrand();
 
   if (!selectedBrand) {
     return (

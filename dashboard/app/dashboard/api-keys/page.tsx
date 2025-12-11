@@ -1,17 +1,8 @@
 import { adminApiFetch } from "@/lib/rewardsApi";
-import { Brand, BrandApiKey } from "@/lib/types";
-import { Card } from "@/components/Card";
+import { BrandApiKey } from "@/lib/types";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiKeysTable } from "@/components/ApiKeysTable";
-
-async function getBrands(): Promise<Brand[]> {
-  try {
-    return await adminApiFetch<Brand[]>("/brands/mine");
-  } catch (error) {
-    console.error("Failed to fetch brands:", error);
-    return [];
-  }
-}
+import { getFirstBrand } from "@/lib/brandHelper";
 
 async function getApiKeys(brandId: string): Promise<BrandApiKey[]> {
   try {
@@ -23,16 +14,15 @@ async function getApiKeys(brandId: string): Promise<BrandApiKey[]> {
 }
 
 export default async function ApiKeysPage() {
-  const brands = await getBrands();
-  const selectedBrand = brands[0];
+  const selectedBrand = await getFirstBrand();
 
   if (!selectedBrand) {
     return (
       <div>
         <PageHeader title="API Keys" />
-        <Card>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-gray-600">No brands found.</p>
-        </Card>
+        </div>
       </div>
     );
   }

@@ -1,17 +1,9 @@
 import { adminApiFetch } from "@/lib/rewardsApi";
-import { Brand, BrandMembersResponse } from "@/lib/types";
+import { BrandMembersResponse } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { MembersTable } from "@/components/MembersTable";
-
-async function getBrands(): Promise<Brand[]> {
-  try {
-    return await adminApiFetch<Brand[]>("/brands/mine");
-  } catch (error) {
-    console.error("Failed to fetch brands:", error);
-    return [];
-  }
-}
+import { getFirstBrand } from "@/lib/brandHelper";
 
 async function getBrandMembers(brandId: string): Promise<BrandMembersResponse | null> {
   try {
@@ -23,8 +15,7 @@ async function getBrandMembers(brandId: string): Promise<BrandMembersResponse | 
 }
 
 export default async function MembersPage() {
-  const brands = await getBrands();
-  const selectedBrand = brands[0];
+  const selectedBrand = await getFirstBrand();
 
   if (!selectedBrand) {
     return (
