@@ -106,11 +106,13 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
     const messageValue = String(errorMessage || `Admin API error ${statusCode}`);
     const pathValue = String(path || "");
 
-    // Log error details separately to avoid serialization issues
-    console.error(`Admin API error [${statusCode}]: ${messageValue}`);
-    console.error(`  Path: ${pathValue}`);
-    console.error(`  URL: ${url}`);
-    console.error(`  Status: ${statusTextValue}`);
+    // Log error details in a single message to reduce console noise
+    console.error(
+      `Admin API error [${statusCode}]: ${messageValue}\n` +
+        `  Path: ${pathValue}\n` +
+        `  URL: ${url}\n` +
+        `  Status: ${statusTextValue}`
+    );
 
     // Create error payload with explicit values
     const errorPayload: { status: number; statusText: string; message: string; path: string } = {
