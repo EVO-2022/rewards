@@ -5,10 +5,13 @@ import { z } from "zod";
 import { webhookService } from "../services/webhookService";
 
 const createWebhookSchema = z.object({
-  url: z.string().url("URL must be a valid URL").refine(
-    (url) => url.startsWith("http://") || url.startsWith("https://"),
-    "URL must start with http:// or https://"
-  ),
+  url: z
+    .string()
+    .url("URL must be a valid URL")
+    .refine(
+      (url) => url.startsWith("http://") || url.startsWith("https://"),
+      "URL must start with http:// or https://"
+    ),
   eventTypes: z.array(z.string()).optional(),
   secret: z.string().optional(),
 });

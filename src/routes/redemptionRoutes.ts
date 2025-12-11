@@ -18,10 +18,13 @@ router.use(authenticate);
 router.use(syncUser);
 router.use("/:brandId", requireBrandAccess());
 
-router.post("/:brandId/redemptions", validate(createRedemptionSchema), redemptionController.createRedemption);
+router.post(
+  "/:brandId/redemptions",
+  validate(createRedemptionSchema),
+  redemptionController.createRedemption
+);
 router.get("/:brandId/redemptions", redemptionController.getRedemptions);
 router.get("/:brandId/redemptions/:redemptionId", redemptionController.getRedemption);
 router.patch("/:brandId/redemptions/:redemptionId/cancel", redemptionController.cancelRedemption);
 
 export default router;
-

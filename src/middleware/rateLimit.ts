@@ -16,4 +16,3 @@ export const apiRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-

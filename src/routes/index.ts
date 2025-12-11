@@ -15,7 +15,10 @@ const router = Router();
 
 const createBrandSchema = z.object({
   name: z.string().min(1),
-  slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9-]+$/),
   description: z.string().optional(),
 });
 
@@ -45,4 +48,3 @@ router.post("/__test/create-brand", validate(createBrandSchema), async (req, res
 });
 
 export default router;
-

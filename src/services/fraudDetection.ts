@@ -6,7 +6,11 @@ export class FraudDetectionService {
   /**
    * Check velocity - too many mints in short time
    */
-  async checkVelocity(brandId: string, userId: string, windowMinutes: number = 60): Promise<boolean> {
+  async checkVelocity(
+    brandId: string,
+    userId: string,
+    windowMinutes: number = 60
+  ): Promise<boolean> {
     const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000);
 
     const recentMints = await prisma.rewardLedger.count({
@@ -27,7 +31,11 @@ export class FraudDetectionService {
   /**
    * Check for suspiciously large mint amounts
    */
-  async checkLargeAmount(_brandId: string, amount: number, threshold: number = 10000): Promise<boolean> {
+  async checkLargeAmount(
+    _brandId: string,
+    amount: number,
+    threshold: number = 10000
+  ): Promise<boolean> {
     return amount > threshold;
   }
 
@@ -104,4 +112,3 @@ export class FraudDetectionService {
 }
 
 export const fraudDetection = new FraudDetectionService();
-

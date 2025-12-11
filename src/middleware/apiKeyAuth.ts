@@ -25,14 +25,14 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
     // Try to get API key from Authorization header first (Bearer rk_...)
     let apiKey: string | undefined;
     const authHeader = req.headers.authorization;
-    
+
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
       if (token.startsWith("rk_")) {
         apiKey = token;
       }
     }
-    
+
     // If not found, try x-api-key header (case-insensitive)
     if (!apiKey) {
       const xApiKey = req.headers["x-api-key"] as string;
@@ -94,4 +94,3 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
     res.status(500).json({ error: "Internal server error" });
   }
 };
-

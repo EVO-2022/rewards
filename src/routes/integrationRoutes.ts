@@ -565,6 +565,16 @@ router.post("/events", validate(eventsSchema), async (req, res) => {
       metadata: data.metadata,
     });
 
+    // Store the event in the database
+    const event = await prisma.integrationEvent.create({
+      data: {
+        brandId,
+        eventName: data.eventName,
+        externalUserId: data.externalUserId,
+        metadata: data.metadata || undefined,
+      },
+    });
+
     // Trigger webhooks for the event (wrapped in try/catch for safety)
     try {
       await triggerWebhooksForEvent({

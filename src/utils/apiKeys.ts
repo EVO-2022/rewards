@@ -9,7 +9,7 @@ export function generateApiKey(): { rawKey: string; hash: string } {
   const randomBytes = crypto.randomBytes(32);
   const rawKey = `rk_${randomBytes.toString("base64url")}`;
   const hash = hashApiKey(rawKey);
-  
+
   return { rawKey, hash };
 }
 
@@ -28,4 +28,3 @@ export function verifyApiKey(rawKey: string, storedHash: string): boolean {
   const computedHash = hashApiKey(rawKey);
   return computedHash === storedHash;
 }
-

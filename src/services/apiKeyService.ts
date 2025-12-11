@@ -33,4 +33,3 @@ export async function createBrandApiKeyForBrandId(
 
   return { brandApiKey, apiKey: rawKey };
 }
-

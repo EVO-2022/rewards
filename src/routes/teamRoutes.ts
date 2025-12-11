@@ -23,8 +23,11 @@ router.use("/:brandId", requireBrandAccess("MANAGER"));
 
 router.post("/:brandId/members", validate(addMemberSchema), teamController.addTeamMember);
 router.get("/:brandId/members", teamController.getTeamMembers);
-router.patch("/:brandId/members/:memberId", validate(updateMemberSchema), teamController.updateTeamMember);
+router.patch(
+  "/:brandId/members/:memberId",
+  validate(updateMemberSchema),
+  teamController.updateTeamMember
+);
 router.delete("/:brandId/members/:memberId", teamController.removeTeamMember);
 
 export default router;
-

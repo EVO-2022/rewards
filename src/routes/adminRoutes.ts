@@ -22,7 +22,10 @@ router.use(requirePlatformAdmin);
 router.get("/users", adminController.getAllUsers);
 router.patch("/users/:userId/suspend", validate(suspendUserSchema), adminController.suspendUser);
 router.get("/brands", adminController.getAllBrands);
-router.patch("/brands/:brandId/suspend", validate(suspendBrandSchema), adminController.suspendBrand);
+router.patch(
+  "/brands/:brandId/suspend",
+  validate(suspendBrandSchema),
+  adminController.suspendBrand
+);
 
 export default router;
-

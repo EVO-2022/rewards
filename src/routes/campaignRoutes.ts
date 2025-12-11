@@ -28,11 +28,18 @@ router.use(authenticate);
 router.use(syncUser);
 router.use("/:brandId", requireBrandAccess("MANAGER"));
 
-router.post("/:brandId/campaigns", validate(createCampaignSchema), campaignController.createCampaign);
+router.post(
+  "/:brandId/campaigns",
+  validate(createCampaignSchema),
+  campaignController.createCampaign
+);
 router.get("/:brandId/campaigns", requireBrandAccess(), campaignController.getCampaigns);
 router.get("/:brandId/campaigns/:campaignId", requireBrandAccess(), campaignController.getCampaign);
-router.patch("/:brandId/campaigns/:campaignId", validate(updateCampaignSchema), campaignController.updateCampaign);
+router.patch(
+  "/:brandId/campaigns/:campaignId",
+  validate(updateCampaignSchema),
+  campaignController.updateCampaign
+);
 router.delete("/:brandId/campaigns/:campaignId", campaignController.deleteCampaign);
 
 export default router;
-

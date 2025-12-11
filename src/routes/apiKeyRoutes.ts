@@ -13,4 +13,3 @@ router.get("/:brandId/api-keys", apiKeyController.listApiKeys);
 router.post("/:brandId/api-keys/:keyId/disable", apiKeyController.disableApiKey);
 
 export default router;
-

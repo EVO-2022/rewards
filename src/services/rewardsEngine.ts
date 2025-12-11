@@ -82,11 +82,14 @@ export class RewardsEngine {
   /**
    * Check if user has sufficient balance
    */
-  async hasSufficientBalance(brandId: string, userId: string, requiredAmount: number): Promise<boolean> {
+  async hasSufficientBalance(
+    brandId: string,
+    userId: string,
+    requiredAmount: number
+  ): Promise<boolean> {
     const balance = await this.getUserBalance(brandId, userId);
     return balance >= requiredAmount;
   }
 }
 
 export const rewardsEngine = new RewardsEngine();
-

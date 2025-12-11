@@ -24,9 +24,7 @@ export type WebhookSubscription = {
  * Minimal event trigger used by the integration events route.
  * For now this just logs; no DB, no network calls.
  */
-export async function triggerWebhooksForEvent(
-  payload: WebhookEventPayload
-): Promise<void> {
+export async function triggerWebhooksForEvent(payload: WebhookEventPayload): Promise<void> {
   console.log("[webhooks] triggerWebhooksForEvent (stub)", payload);
 }
 
@@ -68,10 +66,7 @@ export const webhookService = {
     };
   },
 
-  async deleteSubscription(
-    brandId: string,
-    webhookId: string
-  ): Promise<void> {
+  async deleteSubscription(brandId: string, webhookId: string): Promise<void> {
     console.log("[webhooks] deleteSubscription (stub)", {
       brandId,
       webhookId,

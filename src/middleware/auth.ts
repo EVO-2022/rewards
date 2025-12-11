@@ -5,10 +5,10 @@ import { BrandRole } from "@prisma/client";
 
 /**
  * Authentication middleware
- * 
+ *
  * Development mode: Bypasses auth for local development
  * Production mode: Uses Clerk authentication
- * 
+ *
  * IMPORTANT: SMOKE_TEST_BYPASS only works for routes starting with /api/__test
  */
 export const authenticate = async (req: any, res: Response, next: NextFunction) => {
@@ -26,9 +26,9 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
   // Check if Clerk secret key is configured
   if (!process.env.CLERK_SECRET_KEY) {
     console.error("❌ CLERK_SECRET_KEY is not set in environment variables");
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Authentication not configured",
-      details: "CLERK_SECRET_KEY environment variable is missing"
+      details: "CLERK_SECRET_KEY environment variable is missing",
     });
   }
 
@@ -38,7 +38,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     path: req.path,
     method: req.method,
     hasAuthHeader: !!authHeader,
-    authHeaderType: authHeader ? (authHeader.startsWith("Bearer ") ? "Bearer" : "Other") : "None"
+    authHeaderType: authHeader ? (authHeader.startsWith("Bearer ") ? "Bearer" : "Other") : "None",
   });
 
   // Use Clerk's requireAuth middleware
@@ -51,12 +51,12 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
           path: req.path,
           method: req.method,
           hasAuthHeader: !!authHeader,
-          authHeaderPrefix: authHeader ? authHeader.substring(0, 30) + "..." : "None"
+          authHeaderPrefix: authHeader ? authHeader.substring(0, 30) + "..." : "None",
         });
-        return res.status(401).json({ 
+        return res.status(401).json({
           error: "Unauthorized",
           details: "Invalid or missing authentication token",
-          hint: "Ensure you're sending a valid Clerk session token in the Authorization header as: Authorization: Bearer <token>"
+          hint: "Ensure you're sending a valid Clerk session token in the Authorization header as: Authorization: Bearer <token>",
         });
       }
       // Success - log the authenticated user
@@ -67,9 +67,9 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     });
   } catch (error) {
     console.error("❌ Authentication middleware error:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Authentication error",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -105,9 +105,9 @@ export const syncUser = async (req: any, res: Response, next: NextFunction) => {
     const clerkId = req.auth?.userId;
 
     if (!clerkId) {
-      console.error("❌ syncUser: No Clerk ID in req.auth", { 
+      console.error("❌ syncUser: No Clerk ID in req.auth", {
         hasAuth: !!req.auth,
-        authKeys: req.auth ? Object.keys(req.auth) : []
+        authKeys: req.auth ? Object.keys(req.auth) : [],
       });
       return res.status(401).json({ error: "Unauthorized - no user ID" });
     }

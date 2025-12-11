@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { validate } from "../middleware/validation";
+import { authenticate, syncUser, requireBrandAccess } from "../middleware/auth";
 import { z } from "zod";
 import * as brandController from "../controllers/brandController";
 
@@ -7,7 +8,10 @@ const router = Router();
 
 const createBrandSchema = z.object({
   name: z.string().min(1),
-  slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9-]+$/),
   description: z.string().optional(),
 });
 
@@ -30,5 +34,14 @@ router.get("/:brandId/members", brandController.getBrandMembers);
 router.get("/:brandId", brandController.getBrand);
 router.patch("/:brandId", validate(updateBrandSchema), brandController.updateBrand);
 router.delete("/:brandId", brandController.deleteBrand);
+
+// Events route requires authentication and brand access
+router.get(
+  "/:brandId/events",
+  authenticate,
+  syncUser,
+  requireBrandAccess(),
+  brandController.getBrandEvents
+);
 
 export default router;

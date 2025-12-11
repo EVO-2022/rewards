@@ -27,8 +27,15 @@ router.use("/:brandId", requireBrandAccess("MANAGER"));
 
 router.post("/:brandId/points/issue", validate(issuePointsSchema), pointsController.issuePoints);
 router.post("/:brandId/points/burn", validate(burnPointsSchema), pointsController.burnPoints);
-router.get("/:brandId/points/balance/:userId", requireBrandAccess(), pointsController.getUserBalance);
-router.get("/:brandId/points/ledger/:userId", requireBrandAccess(), pointsController.getLedgerHistory);
+router.get(
+  "/:brandId/points/balance/:userId",
+  requireBrandAccess(),
+  pointsController.getUserBalance
+);
+router.get(
+  "/:brandId/points/ledger/:userId",
+  requireBrandAccess(),
+  pointsController.getLedgerHistory
+);
 
 export default router;
-

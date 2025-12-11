@@ -46,10 +46,7 @@ export const createApiKey = async (req: Request, res: Response) => {
     }
 
     // Use shared service to create API key
-    const { brandApiKey, apiKey: rawKey } = await createBrandApiKeyForBrandId(
-      brandId,
-      data.name
-    );
+    const { brandApiKey, apiKey: rawKey } = await createBrandApiKeyForBrandId(brandId, data.name);
 
     // Return with raw key (only time it's shown)
     res.status(201).json({
@@ -187,4 +184,3 @@ export const disableApiKey = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to disable API key" });
   }
 };
-

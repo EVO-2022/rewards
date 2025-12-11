@@ -16,7 +16,11 @@ export const createRedemption = async (req: Request, res: Response) => {
     const data = createRedemptionSchema.parse(req.body);
 
     // Check balance
-    const hasBalance = await rewardsEngine.hasSufficientBalance(brandId, data.userId, data.pointsUsed);
+    const hasBalance = await rewardsEngine.hasSufficientBalance(
+      brandId,
+      data.userId,
+      data.pointsUsed
+    );
 
     if (!hasBalance) {
       return res.status(400).json({ error: "Insufficient balance" });
@@ -35,16 +39,10 @@ export const createRedemption = async (req: Request, res: Response) => {
     });
 
     // Burn points
-    await rewardsEngine.burnPoints(
-      brandId,
-      data.userId,
-      data.pointsUsed,
-      "redemption",
-      {
-        redemptionId: redemption.id,
-        campaignId: data.campaignId,
-      }
-    );
+    await rewardsEngine.burnPoints(brandId, data.userId, data.pointsUsed, "redemption", {
+      redemptionId: redemption.id,
+      campaignId: data.campaignId,
+    });
 
     // Update redemption status
     const updatedRedemption = await prisma.redemption.update({
@@ -165,4 +163,3 @@ export const cancelRedemption = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to cancel redemption" });
   }
 };
-

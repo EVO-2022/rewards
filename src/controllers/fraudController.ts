@@ -90,4 +90,3 @@ export const reviewFraudFlag = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to review fraud flag" });
   }
 };
-

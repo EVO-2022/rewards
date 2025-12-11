@@ -83,6 +83,8 @@ model Brand {
   redemptions Redemption[]
   webhookEvents WebhookEvent[]
   apiKeys     BrandApiKey[]
+  webhookSubscriptions WebhookSubscription[]
+  integrationEvents IntegrationEvent[]
 
   // Billing (stub)
   stripeCustomerId String?
@@ -220,5 +222,36 @@ model BrandApiKey {
   @@index([brandId])
   @@index([keyHash])
   @@index([isActive])
+}
+
+model WebhookSubscription {
+  id              String    @id @default(uuid())
+  brand           Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandId         String
+  url             String
+  secret          String?
+  eventTypes      String[]
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastSuccess     DateTime?
+  lastError       DateTime?
+  lastErrorMessage String?
+
+  @@index([brandId])
+}
+
+model IntegrationEvent {
+  id            String    @id @default(uuid())
+  brand         Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandId       String
+  eventName     String
+  externalUserId String?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+
+  @@index([brandId])
+  @@index([eventName])
+  @@index([createdAt])
 }
 

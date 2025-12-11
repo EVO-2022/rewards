@@ -18,7 +18,10 @@ router.use("/:brandId", requireBrandAccess("MANAGER"));
 
 router.get("/:brandId/fraud", fraudController.getFraudFlags);
 router.get("/:brandId/fraud/:flagId", fraudController.getFraudFlag);
-router.patch("/:brandId/fraud/:flagId/review", validate(reviewFraudFlagSchema), fraudController.reviewFraudFlag);
+router.patch(
+  "/:brandId/fraud/:flagId/review",
+  validate(reviewFraudFlagSchema),
+  fraudController.reviewFraudFlag
+);
 
 export default router;
-

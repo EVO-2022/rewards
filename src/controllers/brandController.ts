@@ -5,7 +5,10 @@ import { z } from "zod";
 
 const createBrandSchema = z.object({
   name: z.string().min(1),
-  slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9-]+$/),
   description: z.string().optional(),
 });
 
@@ -22,13 +25,13 @@ export const createBrand = async (req: Request, res: Response) => {
     if (!userId && process.env.SMOKE_TEST_BYPASS !== "true") {
       return res.status(401).json({ error: "Unauthorized" });
     }
-    
+
     // In smoke test mode, userId should already be set by the test route
     if (!userId) {
       console.error("⚠️ No userId in smoke test mode - this should not happen");
       return res.status(500).json({ error: "Internal error: user not set" });
     }
-    
+
     const effectiveUserId = userId;
 
     const data = createBrandSchema.parse(req.body);
@@ -428,3 +431,101 @@ export const getBrandMembers = async (req: Request, res: Response) => {
   }
 };
 
+export const getBrandEvents = async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth?.userId;
+    const { brandId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: "error",
+        code: "UNAUTHORIZED",
+        message: "Unauthorized",
+      });
+    }
+
+    // Check if brand exists and user is a member
+    const brand = await prisma.brand.findUnique({
+      where: { id: brandId },
+    });
+
+    if (!brand) {
+      return res.status(404).json({
+        status: "error",
+        code: "BRAND_NOT_FOUND",
+        message: "Brand not found",
+      });
+    }
+
+    const membership = await prisma.brandMember.findUnique({
+      where: {
+        userId_brandId: {
+          userId,
+          brandId,
+        },
+      },
+    });
+
+    if (!membership) {
+      return res.status(403).json({
+        status: "error",
+        code: "ACCESS_DENIED",
+        message: "Access denied to this brand",
+      });
+    }
+
+    // Parse pagination params
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 20));
+
+    const skip = (page - 1) * pageSize;
+
+    // Get total count
+    const total = await prisma.integrationEvent.count({
+      where: { brandId },
+    });
+
+    // Get events
+    const events = await prisma.integrationEvent.findMany({
+      where: { brandId },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: pageSize,
+    });
+
+    const items = events.map(
+      (event: {
+        id: string;
+        eventName: string;
+        externalUserId: string | null;
+        metadata: unknown;
+        createdAt: Date;
+      }) => ({
+        id: event.id,
+        eventName: event.eventName,
+        externalUserId: event.externalUserId,
+        metadata: event.metadata,
+        createdAt: event.createdAt.toISOString(),
+      })
+    );
+
+    res.json({
+      status: "ok",
+      brandId,
+      page,
+      pageSize,
+      total,
+      hasMore: skip + pageSize < total,
+      items,
+    });
+  } catch (error) {
+    console.error("Get brand events error:", error);
+    res.status(500).json({
+      status: "error",
+      code: "INTERNAL_ERROR",
+      message: "Unexpected error listing events",
+    });
+  }
+};

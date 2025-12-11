@@ -1,4 +1,11 @@
-import { BrandRole, CampaignStatus, LedgerType, FraudSeverity, FraudStatus, WebhookSource } from "@prisma/client";
+import {
+  BrandRole,
+  CampaignStatus,
+  LedgerType,
+  FraudSeverity,
+  FraudStatus,
+  WebhookSource,
+} from "@prisma/client";
 
 export type { BrandRole, CampaignStatus, LedgerType, FraudSeverity, FraudStatus, WebhookSource };
 
@@ -34,4 +41,3 @@ declare global {
     }
   }
 }
-
