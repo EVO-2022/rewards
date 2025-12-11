@@ -568,6 +568,25 @@ router.post("/events", validate(eventsSchema), async (req, res) => {
       metadata: data.metadata,
     });
 
+    // Trigger webhooks for the event (wrapped in try/catch for safety)
+    try {
+      await triggerWebhooksForEvent({
+        brandId,
+        eventName: data.eventName,
+        externalUserId: data.externalUserId,
+        metadata: data.metadata,
+      });
+    } catch (webhookError) {
+      // If webhook triggering fails, log but don't fail the main request
+      console.error("Integration events webhook error:", webhookError);
+      // Return webhook error response
+      return res.status(500).json({
+        status: "error",
+        code: "WEBHOOK_ERROR",
+        message: "Failed to trigger webhooks for event",
+      });
+    }
+
     // Return success response
     res.status(200).json({
       status: "ok",

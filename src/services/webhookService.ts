@@ -1,140 +1,285 @@
 import { prisma } from "../utils/prisma";
-import { WebhookSource } from "@prisma/client";
-import { WebhookIngestPayload } from "../types";
-import { rewardsEngine } from "./rewardsEngine";
-import { fraudDetection } from "./fraudDetection";
-import { clerkClient } from "@clerk/express";
 
-export class WebhookService {
-  /**
-   * Process incoming webhook
-   */
-  async processWebhook(payload: WebhookIngestPayload, brandId?: string) {
-    // Store raw webhook event
-    const webhookEvent = await prisma.webhookEvent.create({
-      data: {
-        brandId: brandId || null,
-        source: payload.source.toUpperCase() as WebhookSource,
-        eventType: payload.event,
-        rawPayload: payload.metadata.raw_payload,
-        processed: false,
+export type WebhookEventType = "points.issued" | "points.redeemed";
+
+export interface WebhookEventPayload {
+  type: WebhookEventType;
+  brandId: string;
+  userId: string;
+  externalUserId?: string | null;
+  points: number;
+  ledgerEntryId?: string;
+  redemptionId?: string;
+  createdAt: string; // ISO timestamp
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Trigger webhooks for points events (points.issued, points.redeemed)
+ * Finds all active subscriptions matching the event type and sends POST requests
+ * Errors are logged but don't fail the main request
+ */
+async function triggerWebhooksForPointsEvent(event: WebhookEventPayload): Promise<void> {
+  try {
+    // 1) Look up active subscriptions for the brand
+    const subscriptions = await prisma.webhookSubscription.findMany({
+      where: {
+        brandId: event.brandId,
+        isActive: true,
+        OR: [{ eventTypes: { has: event.type } }, { eventTypes: { has: "*" } }],
       },
     });
 
-    try {
-      // Find or create user
-      const user = await this.findOrCreateUser(payload.user);
+    // 2) If none, return early
+    if (subscriptions.length === 0) {
+      return;
+    }
 
-      // Determine brand if not provided
-      const finalBrandId = brandId || (await this.determineBrand(payload));
+    console.log(
+      `[Webhook] Triggering ${subscriptions.length} webhook(s) for event ${event.type} (brand: ${event.brandId})`
+    );
 
-      if (!finalBrandId) {
-        throw new Error("Unable to determine brand for webhook");
+    // 3) For each subscription, send POST request
+    const promises = subscriptions.map(async (subscription) => {
+      try {
+        const payload = {
+          event: event.type,
+          data: event,
+        };
+
+        const response = await fetch(subscription.url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Rewards-Brand-Id": event.brandId,
+            "X-Rewards-Event-Type": event.type,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          // Success: update lastSuccess and clear error fields
+          await prisma.webhookSubscription.update({
+            where: { id: subscription.id },
+            data: {
+              lastSuccess: new Date(),
+              lastError: null,
+              lastErrorMessage: null,
+            },
+          });
+          console.log(
+            `[Webhook] Successfully sent webhook ${subscription.id} to ${subscription.url}`
+          );
+        } else {
+          // HTTP error: update error fields
+          const errorText = await response.text().catch(() => `HTTP ${response.status}`);
+          const truncatedError =
+            errorText.length > 500 ? errorText.substring(0, 500) + "..." : errorText;
+
+          await prisma.webhookSubscription.update({
+            where: { id: subscription.id },
+            data: {
+              lastError: new Date(),
+              lastErrorMessage: truncatedError,
+            },
+          });
+          console.error(
+            `[Webhook] Failed to send webhook ${subscription.id} to ${subscription.url}: HTTP ${response.status}`
+          );
+        }
+      } catch (error) {
+        // Network/other error: update error fields
+        const errorMessage =
+          error instanceof Error ? error.message : String(error || "Unknown error");
+        const truncatedError =
+          errorMessage.length > 500 ? errorMessage.substring(0, 500) + "..." : errorMessage;
+
+        await prisma.webhookSubscription.update({
+          where: { id: subscription.id },
+          data: {
+            lastError: new Date(),
+            lastErrorMessage: truncatedError,
+          },
+        });
+        console.error(
+          `[Webhook] Error sending webhook ${subscription.id} to ${subscription.url}:`,
+          errorMessage
+        );
       }
-
-      // Process based on event type
-      if (payload.event === "checkout.completed" || payload.event === "payment_intent.succeeded") {
-        await this.processSaleEvent(finalBrandId, user.id, payload);
-      }
-
-      // Mark as processed
-      await prisma.webhookEvent.update({
-        where: { id: webhookEvent.id },
-        data: {
-          processed: true,
-          processedAt: new Date(),
-        },
-      });
-
-      return webhookEvent;
-    } catch (error) {
-      // Mark as error
-      await prisma.webhookEvent.update({
-        where: { id: webhookEvent.id },
-        data: {
-          error: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Find or create user from webhook data
-   */
-  private async findOrCreateUser(userData: { email?: string; phone?: string }) {
-    // Try to find existing user
-    let user = null;
-
-    if (userData.email) {
-      user = await prisma.user.findUnique({
-        where: { email: userData.email },
-      });
-    }
-
-    if (!user && userData.phone) {
-      user = await prisma.user.findUnique({
-        where: { phone: userData.phone },
-      });
-    }
-
-    // If user doesn't exist, we need to create a placeholder
-    // In production, you'd want to create a Clerk user first
-    if (!user) {
-      // For MVP, create user with a generated clerkId
-      // In production, integrate with Clerk user creation
-      const tempClerkId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      user = await prisma.user.create({
-        data: {
-          clerkId: tempClerkId,
-          email: userData.email || null,
-          phone: userData.phone || null,
-        },
-      });
-    }
-
-    return user;
-  }
-
-  /**
-   * Determine brand from webhook payload
-   * In production, this would use webhook signatures or metadata
-   */
-  private async determineBrand(_payload: WebhookIngestPayload): Promise<string | null> {
-    // For MVP, return first active brand
-    // In production, use webhook metadata or signatures to determine brand
-    const brand = await prisma.brand.findFirst({
-      where: { isActive: true, isSuspended: false },
     });
 
-    return brand?.id || null;
+    // Wait for all webhooks to complete (but don't throw if any fail)
+    await Promise.allSettled(promises);
+  } catch (error) {
+    // Log but don't throw - webhook failures shouldn't break the main request
+    console.error("[Webhook] Error in triggerWebhooksForEvent:", error);
   }
+}
 
-  /**
-   * Process sale event and issue points
-   */
-  private async processSaleEvent(brandId: string, userId: string, payload: WebhookIngestPayload) {
-    // Calculate points (1 point per dollar by default)
-    const points = Math.floor(payload.order.total);
+/**
+ * Trigger webhooks for custom integration events
+ * This function handles arbitrary event names (not just points.issued/points.redeemed)
+ * Logs the event and attempts to trigger webhooks if subscriptions exist
+ */
+async function triggerWebhooksForCustomEvent(params: {
+  brandId: string;
+  eventName: string;
+  externalUserId: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    // Log the event
+    console.log("[webhooks] triggerWebhooksForEvent", {
+      brandId: params.brandId,
+      eventName: params.eventName,
+      externalUserId: params.externalUserId,
+      metadata: params.metadata ?? null,
+    });
 
-    // Run fraud checks
-    await fraudDetection.runFraudChecks(brandId, userId, points);
+    // Try to find webhook subscriptions that might match this event
+    // Check for subscriptions with "*" (all events) or the specific eventName
+    try {
+      const subscriptions = await prisma.webhookSubscription.findMany({
+        where: {
+          brandId: params.brandId,
+          isActive: true,
+          OR: [{ eventTypes: { has: params.eventName } }, { eventTypes: { has: "*" } }],
+        },
+      });
 
-    // Mint points
-    await rewardsEngine.mintPoints(
-      brandId,
-      userId,
-      points,
-      payload.event,
-      {
-        orderId: payload.order.id,
-        orderTotal: payload.order.total,
-        currency: payload.order.currency,
-        source: payload.source,
+      if (subscriptions.length > 0) {
+        console.log(
+          `[Webhook] Found ${subscriptions.length} webhook subscription(s) for custom event ${params.eventName} (brand: ${params.brandId})`
+        );
+
+        // For each subscription, send POST request with custom event payload
+        const promises = subscriptions.map(async (subscription) => {
+          try {
+            const payload = {
+              event: params.eventName,
+              data: {
+                brandId: params.brandId,
+                externalUserId: params.externalUserId,
+                eventName: params.eventName,
+                metadata: params.metadata ?? null,
+                createdAt: new Date().toISOString(),
+              },
+            };
+
+            const response = await fetch(subscription.url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Rewards-Brand-Id": params.brandId,
+                "X-Rewards-Event-Type": params.eventName,
+              },
+              body: JSON.stringify(payload),
+            });
+
+            if (response.ok) {
+              await prisma.webhookSubscription.update({
+                where: { id: subscription.id },
+                data: {
+                  lastSuccess: new Date(),
+                  lastError: null,
+                  lastErrorMessage: null,
+                },
+              });
+              console.log(
+                `[Webhook] Successfully sent custom event webhook ${subscription.id} to ${subscription.url}`
+              );
+            } else {
+              const errorText = await response.text().catch(() => `HTTP ${response.status}`);
+              const truncatedError =
+                errorText.length > 500 ? errorText.substring(0, 500) + "..." : errorText;
+
+              await prisma.webhookSubscription.update({
+                where: { id: subscription.id },
+                data: {
+                  lastError: new Date(),
+                  lastErrorMessage: truncatedError,
+                },
+              });
+              console.error(
+                `[Webhook] Failed to send custom event webhook ${subscription.id} to ${subscription.url}: HTTP ${response.status}`
+              );
+            }
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error || "Unknown error");
+            const truncatedError =
+              errorMessage.length > 500 ? errorMessage.substring(0, 500) + "..." : errorMessage;
+
+            await prisma.webhookSubscription.update({
+              where: { id: subscription.id },
+              data: {
+                lastError: new Date(),
+                lastErrorMessage: truncatedError,
+              },
+            });
+            console.error(
+              `[Webhook] Error sending custom event webhook ${subscription.id} to ${subscription.url}:`,
+              errorMessage
+            );
+          }
+        });
+
+        await Promise.allSettled(promises);
+      }
+    } catch (webhookError) {
+      // If webhook lookup fails (e.g., Prisma client not regenerated), just log and continue
+      console.warn(
+        "[Webhook] Could not trigger webhooks for custom event (webhook system may not be initialized):",
+        webhookError
+      );
+    }
+  } catch (error) {
+    // Log but never throw - this function should never break the main request
+    console.error("[Webhook] Error in triggerWebhooksForCustomEvent:", error);
+  }
+}
+
+/**
+ * Trigger webhooks for events
+ * Function overload for points events (points.issued, points.redeemed)
+ */
+export async function triggerWebhooksForEvent(event: WebhookEventPayload): Promise<void>;
+
+/**
+ * Trigger webhooks for events
+ * Function overload for custom integration events
+ */
+export async function triggerWebhooksForEvent(params: {
+  brandId: string;
+  eventName: string;
+  externalUserId: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void>;
+
+/**
+ * Implementation that handles both points events and custom events
+ */
+export async function triggerWebhooksForEvent(
+  eventOrParams:
+    | WebhookEventPayload
+    | {
+        brandId: string;
+        eventName: string;
+        externalUserId: string;
+        metadata?: Record<string, unknown>;
+      }
+): Promise<void> {
+  // Check if it's a points event (has 'type' and 'userId' properties)
+  if ("type" in eventOrParams && "userId" in eventOrParams) {
+    return triggerWebhooksForPointsEvent(eventOrParams as WebhookEventPayload);
+  } else {
+    return triggerWebhooksForCustomEvent(
+      eventOrParams as {
+        brandId: string;
+        eventName: string;
+        externalUserId: string;
+        metadata?: Record<string, unknown>;
       }
     );
   }
 }
-
-export const webhookService = new WebhookService();
-
