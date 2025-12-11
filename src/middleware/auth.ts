@@ -11,18 +11,38 @@ const clerkClient = createClerkClient({
 /**
  * Authentication middleware
  *
+ * Verifies Clerk JWT, syncs/loads the DB user, and attaches it to req.user.
+ * Also maintains req.auth for backward compatibility.
+ *
  * Development mode: Bypasses auth for local development
  * Production mode: Uses Clerk authentication
  *
  * IMPORTANT: SMOKE_TEST_BYPASS only works for routes starting with /api/__test
  */
 export const authenticate = async (req: any, res: Response, next: NextFunction) => {
-  // Development mode: bypass auth
+  // Development mode: bypass auth and ensure dev user exists
   if (process.env.NODE_ENV === "development") {
+    let user = await prisma.user.findUnique({
+      where: { id: "dev-user-id" },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: "dev-user-id",
+          clerkId: "dev-user-id",
+          email: "dev@local.test",
+          isPlatformAdmin: true,
+        },
+      });
+    }
+
+    // Attach user to request
+    req.user = user;
     req.auth = {
-      userId: "dev-user-id",
-      email: "dev@local.test",
-      phone: undefined,
+      userId: user.id,
+      email: user.email || undefined,
+      phone: user.phone || undefined,
     };
     return next();
   }
@@ -60,11 +80,14 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
 
   // Verify token using @clerk/backend
   try {
-    const { userId, sessionId } = await verifyToken(token, {
+    const verification = await verifyToken(token, {
       secretKey: process.env.CLERK_SECRET_KEY!,
     });
 
-    if (!userId) {
+    const clerkId = verification.sub || verification.userId;
+    const sessionId = verification.sid || verification.sessionId;
+
+    if (!clerkId || typeof clerkId !== "string") {
       console.error("❌ Token verification failed: no userId");
       return res.status(401).json({
         error: "Unauthorized",
@@ -74,12 +97,49 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     }
 
     // Success - log the authenticated user
-    console.log("✅ Authenticated user:", userId);
+    console.log("✅ Authenticated user:", clerkId);
 
-    // Attach auth info to request
+    // Sync/load DB user
+    console.log("🔄 Syncing user to database:", { clerkId });
+
+    // Look up user by Clerk ID
+    let user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    // If user doesn't exist, create them from Clerk data
+    if (!user) {
+      console.log("📝 Creating new user from Clerk:", clerkId);
+      try {
+        const clerkUser = await clerkClient.users.getUser(clerkId);
+        user = await prisma.user.create({
+          data: {
+            clerkId,
+            email: clerkUser.emailAddresses[0]?.emailAddress || null,
+            phone: clerkUser.phoneNumbers[0]?.phoneNumber || null,
+          },
+        });
+        console.log("✅ Created user in database:", user.id);
+      } catch (error) {
+        console.error("❌ Error fetching Clerk user:", error);
+        // Fallback: create user with just Clerk ID
+        user = await prisma.user.create({
+          data: { clerkId },
+        });
+        console.log("✅ Created user with fallback:", user.id);
+      }
+    } else {
+      console.log("✅ User already exists in database:", user.id);
+    }
+
+    // Attach user to request
+    req.user = user;
     req.auth = {
-      userId,
-      sessionId,
+      userId: user.id, // Database user ID
+      email: user.email || undefined,
+      phone: user.phone || undefined,
+      clerkId: clerkId, // Keep Clerk ID for reference
+      sessionId: sessionId || undefined,
     };
 
     next();
@@ -238,6 +298,28 @@ export const requireBrandAccess = (requiredRole?: BrandRole) => {
       res.status(500).json({ error: "Internal server error" });
     }
   };
+};
+
+/**
+ * Admin authentication middleware
+ *
+ * Calls authenticate first to verify JWT and sync/load DB user.
+ * For MVP, does not enforce platform admin checks - just ensures req.user exists.
+ * TODO: Later tighten this to real role checks, but MVP should not block
+ * normal users from managing their own brands.
+ */
+export const adminAuth = async (req: any, res: Response, next: NextFunction) => {
+  // First, run authenticate to verify JWT and sync user
+  return authenticate(req, res, () => {
+    // Ensure req.user exists (authenticate should have set it)
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized - user not found" });
+    }
+
+    // For MVP, just ensure user exists - no additional role checks
+    // TODO: Add platform admin or brand owner checks here later
+    next();
+  });
 };
 
 /**

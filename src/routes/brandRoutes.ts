@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validate } from "../middleware/validation";
-import { authenticate, syncUser, requireBrandAccess } from "../middleware/auth";
+import { authenticate, adminAuth, requireBrandAccess } from "../middleware/auth";
 import { z } from "zod";
 import * as brandController from "../controllers/brandController";
 
@@ -21,27 +21,19 @@ const updateBrandSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-// ✅ AUTH COMPLETELY DISABLED FOR LOCAL DEV
-// No authenticate
-// No syncUser
-// No requireBrandAccess
+// Routes that only need authentication (no brand access check)
+router.get("/mine", authenticate, brandController.getMyBrands);
+router.post("/", authenticate, validate(createBrandSchema), brandController.createBrand);
 
-router.post("/", validate(createBrandSchema), brandController.createBrand);
-router.get("/mine", brandController.getMyBrands);
+// Public route (no auth required)
 router.get("/", brandController.getBrands);
-router.get("/:brandId/summary", brandController.getBrandSummary);
-router.get("/:brandId/members", brandController.getBrandMembers);
-router.get("/:brandId", brandController.getBrand);
-router.patch("/:brandId", validate(updateBrandSchema), brandController.updateBrand);
-router.delete("/:brandId", brandController.deleteBrand);
 
-// Events route requires authentication and brand access
-router.get(
-  "/:brandId/events",
-  authenticate,
-  syncUser,
-  requireBrandAccess(),
-  brandController.getBrandEvents
-);
+// Brand-scoped admin routes (require adminAuth + brand access)
+router.get("/:brandId/summary", adminAuth, requireBrandAccess(), brandController.getBrandSummary);
+router.get("/:brandId/members", adminAuth, requireBrandAccess(), brandController.getBrandMembers);
+router.get("/:brandId/events", adminAuth, requireBrandAccess(), brandController.getBrandEvents);
+router.get("/:brandId", adminAuth, requireBrandAccess(), brandController.getBrand);
+router.patch("/:brandId", adminAuth, requireBrandAccess(), validate(updateBrandSchema), brandController.updateBrand);
+router.delete("/:brandId", adminAuth, requireBrandAccess(), brandController.deleteBrand);
 
 export default router;

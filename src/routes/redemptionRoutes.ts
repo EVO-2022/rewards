@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireBrandAccess, syncUser } from "../middleware/auth";
+import { adminAuth, requireBrandAccess } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { z } from "zod";
 import * as redemptionController from "../controllers/redemptionController";
@@ -13,18 +13,16 @@ const createRedemptionSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
-// All routes require authentication and user sync
-router.use(authenticate);
-router.use(syncUser);
-router.use("/:brandId", requireBrandAccess());
-
+// All routes require admin auth and brand access
 router.post(
   "/:brandId/redemptions",
+  adminAuth,
+  requireBrandAccess(),
   validate(createRedemptionSchema),
   redemptionController.createRedemption
 );
-router.get("/:brandId/redemptions", redemptionController.getRedemptions);
-router.get("/:brandId/redemptions/:redemptionId", redemptionController.getRedemption);
-router.patch("/:brandId/redemptions/:redemptionId/cancel", redemptionController.cancelRedemption);
+router.get("/:brandId/redemptions", adminAuth, requireBrandAccess(), redemptionController.getRedemptions);
+router.get("/:brandId/redemptions/:redemptionId", adminAuth, requireBrandAccess(), redemptionController.getRedemption);
+router.patch("/:brandId/redemptions/:redemptionId/cancel", adminAuth, requireBrandAccess(), redemptionController.cancelRedemption);
 
 export default router;

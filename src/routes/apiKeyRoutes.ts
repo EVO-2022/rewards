@@ -1,15 +1,12 @@
 import { Router } from "express";
-import { authenticate, syncUser } from "../middleware/auth";
+import { adminAuth, requireBrandAccess } from "../middleware/auth";
 import * as apiKeyController from "../controllers/apiKeyController";
 
 const router = Router();
 
-// All API key routes require authentication
-router.use(authenticate);
-router.use(syncUser);
-
-router.post("/:brandId/api-keys", apiKeyController.createApiKey);
-router.get("/:brandId/api-keys", apiKeyController.listApiKeys);
-router.post("/:brandId/api-keys/:keyId/disable", apiKeyController.disableApiKey);
+// All API key routes require admin auth and brand access
+router.post("/:brandId/api-keys", adminAuth, requireBrandAccess(), apiKeyController.createApiKey);
+router.get("/:brandId/api-keys", adminAuth, requireBrandAccess(), apiKeyController.listApiKeys);
+router.post("/:brandId/api-keys/:keyId/disable", adminAuth, requireBrandAccess(), apiKeyController.disableApiKey);
 
 export default router;

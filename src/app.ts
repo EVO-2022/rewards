@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 
-import { authenticate, syncUser } from "./middleware/auth";
+import { authenticate } from "./middleware/auth";
 
 import brandRoutes from "./routes/brandRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
@@ -54,23 +54,8 @@ export function createApp() {
     return authenticate(req, res, next);
   });
 
-  // Sync authenticated users to database (runs after auth)
-  app.use((req, res, next) => {
-    // Skip sync for health check, integration routes, and test routes
-    if (
-      req.path === "/health" ||
-      req.path.startsWith("/api/integration") ||
-      (process.env.SMOKE_TEST_BYPASS === "true" &&
-        (req.path.startsWith("/api/__test") || req.path.startsWith("/__test")))
-    ) {
-      return next();
-    }
-    // Only sync if user is authenticated
-    if (req.auth?.userId) {
-      return syncUser(req, res, next);
-    }
-    return next();
-  });
+  // Note: User sync is now handled by authenticate middleware
+  // No separate syncUser middleware needed
 
   // Health check
   app.get("/health", (_, res) => {
