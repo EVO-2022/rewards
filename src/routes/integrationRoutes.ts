@@ -30,32 +30,14 @@ router.get("/whoami", async (req, res) => {
   }
 });
 
-const issuePointsSchema = z.object({
-  externalUserId: z.string().min(1),
-  email: z.string().email().optional(),
-  amount: z.number().positive(),
-  reason: z.string().optional(),
-});
-
 /**
  * Find or create a user for integration
- * Uses email if provided, otherwise creates with integration clerkId pattern
+ * Uses integration clerkId pattern: integration_{brandId}_{externalUserId}
  */
 async function findOrCreateIntegrationUser(
   brandId: string,
-  externalUserId: string,
-  email?: string
+  externalUserId: string
 ): Promise<{ id: string }> {
-  // Try to find by email first if provided
-  if (email) {
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-    if (existingUser) {
-      return existingUser;
-    }
-  }
-
   // Create integration user with special clerkId pattern
   const integrationClerkId = `integration_${brandId}_${externalUserId}`;
   
@@ -65,13 +47,6 @@ async function findOrCreateIntegrationUser(
   });
 
   if (existingIntegrationUser) {
-    // Update email if provided and different
-    if (email && existingIntegrationUser.email !== email) {
-      return await prisma.user.update({
-        where: { id: existingIntegrationUser.id },
-        data: { email },
-      });
-    }
     return existingIntegrationUser;
   }
 
@@ -79,35 +54,41 @@ async function findOrCreateIntegrationUser(
   return await prisma.user.create({
     data: {
       clerkId: integrationClerkId,
-      email: email || null,
+      email: null,
     },
   });
 }
 
+const issuePointsSchema = z.object({
+  externalUserId: z.string().min(1, "externalUserId is required and must be non-empty"),
+  points: z.number().positive("points must be a positive number"),
+  reason: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
 router.post("/points/issue", validate(issuePointsSchema), async (req, res) => {
   try {
     const brandId = req.integrationAuth!.brandId;
+    const apiKeyId = req.integrationAuth!.apiKeyId;
     const data = issuePointsSchema.parse(req.body);
 
-    // Find or create user
-    const user = await findOrCreateIntegrationUser(
-      brandId,
-      data.externalUserId,
-      data.email
-    );
+    // Find or create user by externalUserId
+    const user = await findOrCreateIntegrationUser(brandId, data.externalUserId);
 
     // Run fraud checks
-    await fraudDetection.runFraudChecks(brandId, user.id, data.amount);
+    await fraudDetection.runFraudChecks(brandId, user.id, data.points);
 
-    // Issue points
+    // Issue points using rewards engine
     const ledger = await rewardsEngine.mintPoints(
       brandId,
       user.id,
-      data.amount,
+      data.points,
       data.reason || "integration_issue",
       {
         externalUserId: data.externalUserId,
         source: "api_integration",
+        apiKeyId: apiKeyId,
+        ...(data.metadata || {}),
       }
     );
 
@@ -115,15 +96,22 @@ router.post("/points/issue", validate(issuePointsSchema), async (req, res) => {
     const newBalance = await rewardsEngine.getUserBalance(brandId, user.id);
 
     res.status(201).json({
+      status: "ok",
       brandId,
       userId: user.id,
       externalUserId: data.externalUserId,
-      amount: data.amount,
+      pointsIssued: data.points,
       newBalance,
       ledgerEntryId: ledger.id,
     });
   } catch (error) {
     console.error("Integration issue points error:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: "Validation error",
+        details: error.errors,
+      });
+    }
     res.status(500).json({ error: "Failed to issue points" });
   }
 });
