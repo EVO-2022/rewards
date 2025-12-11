@@ -43,25 +43,48 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
 
   if (!res.ok) {
     let errorMessage = `Admin API error ${res.status}`;
+    let responseText = "";
+
     try {
-      const jsonData = await res.json();
-      if (jsonData && typeof jsonData === "object") {
-        errorMessage = String(jsonData.error || jsonData.message || errorMessage);
-      } else if (typeof jsonData === "string") {
-        errorMessage = jsonData;
+      // Try to read response as text first
+      responseText = await res.text();
+
+      // Try to parse as JSON
+      if (responseText) {
+        try {
+          const jsonData = JSON.parse(responseText);
+          if (jsonData && typeof jsonData === "object") {
+            errorMessage = String(jsonData.error || jsonData.message || errorMessage);
+          } else if (typeof jsonData === "string") {
+            errorMessage = jsonData;
+          }
+        } catch {
+          // Not JSON, use the text as error message if it's not too long
+          if (responseText.length < 200) {
+            errorMessage = responseText;
+          }
+        }
       }
-    } catch {
-      // ignore JSON parse errors, use default message
+    } catch (readError) {
+      // If we can't read the response, use status-based message
+      console.error("Failed to read error response:", readError);
     }
 
     // Create a plain object literal (not Object.create(null)) with only serializable primitives
-    const errorPayload: { status: number; statusText: string; message: string } = {
+    const errorPayload: { status: number; statusText: string; message: string; path?: string } = {
       status: Number(res.status),
-      statusText: String(res.statusText || ""),
+      statusText: String(res.statusText || "Unknown"),
       message: errorMessage,
+      path: path,
     };
 
-    console.error("Admin API error", errorPayload);
+    console.error("Admin API error:", {
+      status: errorPayload.status,
+      statusText: errorPayload.statusText,
+      message: errorPayload.message,
+      path: errorPayload.path,
+      url: url,
+    });
 
     // Throw a plain object that's guaranteed to be serializable
     throw errorPayload;
