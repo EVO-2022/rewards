@@ -38,7 +38,12 @@ export async function getFirstBrand(): Promise<Brand | null> {
     const firstBrand = brands[0];
     return sanitizeBrand(firstBrand);
   } catch (error) {
-    console.error("Failed to fetch brands:", error);
+    // Log error details safely without passing non-serializable objects
+    const errorMsg =
+      error && typeof error === "object" && "message" in error
+        ? String(error.message)
+        : String(error || "Unknown error");
+    console.error("Failed to fetch brands:", errorMsg);
     return null;
   }
 }

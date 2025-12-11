@@ -29,13 +29,35 @@ export default async function ApiKeysPage() {
     }
 
     apiKeys = await adminApiFetch<BrandApiKey[]>(`/brands/${brand.id}/api-keys`);
+
+    // Sanitize apiKeys array to ensure all items are serializable
+    apiKeys = (apiKeys || []).map((key) => ({
+      id: String(key.id || ""),
+      brandId: String(key.brandId || ""),
+      name: String(key.name || ""),
+      isActive: Boolean(key.isActive),
+      createdAt: String(key.createdAt || ""),
+      lastUsedAt: key.lastUsedAt ? String(key.lastUsedAt) : null,
+    }));
   } catch (err: any) {
-    // Ensure this is always a plain string
-    if (err && typeof err === "object") {
-      errorMessage = (err.message as string) || JSON.stringify(err);
+    // Ensure this is always a plain string - never pass the error object
+    if (err && typeof err === "object" && err !== null) {
+      if ("message" in err && typeof err.message === "string") {
+        errorMessage = err.message;
+      } else {
+        const keys = Object.keys(err);
+        if (keys.length === 0) {
+          errorMessage = "An unknown error occurred";
+        } else {
+          errorMessage = JSON.stringify(err);
+        }
+      }
     } else {
-      errorMessage = String(err);
+      errorMessage = String(err || "Unknown error");
     }
+    // Clear data to prevent passing non-serializable objects
+    brand = null;
+    apiKeys = [];
   }
 
   if (errorMessage) {

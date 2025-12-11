@@ -56,15 +56,45 @@ export default async function DashboardPage() {
     };
 
     summary = await adminApiFetch<BrandSummary>(`/brands/${brand.id}/summary`);
+
+    // Sanitize summary to ensure all properties are serializable
+    if (summary) {
+      summary = {
+        brandId: String(summary.brandId || ""),
+        name: String(summary.name || ""),
+        slug: String(summary.slug || ""),
+        memberCount: Number(summary.memberCount || 0),
+        totalPointsIssued: Number(summary.totalPointsIssued || 0),
+        totalPointsBurned: Number(summary.totalPointsBurned || 0),
+        currentLiability: Number(summary.currentLiability || 0),
+        totalRedemptions: Number(summary.totalRedemptions || 0),
+        completedRedemptions: Number(summary.completedRedemptions || 0),
+        pendingRedemptions: Number(summary.pendingRedemptions || 0),
+        failedRedemptions: Number(summary.failedRedemptions || 0),
+        lastActivityAt: summary.lastActivityAt ? String(summary.lastActivityAt) : null,
+      };
+    }
   } catch (err: any) {
     // Ensure this is always a plain string - never pass the error object
+    // Handle empty objects, Error instances, and plain objects
     if (err && typeof err === "object" && err !== null) {
-      errorMessage = String(err.message || JSON.stringify(err));
+      if ("message" in err && typeof err.message === "string") {
+        errorMessage = err.message;
+      } else {
+        // For empty objects or objects without message, create a generic message
+        const keys = Object.keys(err);
+        if (keys.length === 0) {
+          errorMessage = "An unknown error occurred";
+        } else {
+          errorMessage = JSON.stringify(err);
+        }
+      }
     } else {
       errorMessage = String(err || "Unknown error");
     }
-    // Clear brand to prevent passing non-serializable data
+    // Clear brand and summary to prevent passing non-serializable data
     brand = null;
+    summary = null;
   }
 
   if (errorMessage) {

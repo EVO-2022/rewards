@@ -29,13 +29,51 @@ export default async function RedemptionsPage() {
     }
 
     redemptions = await adminApiFetch<Redemption[]>(`/brands/${brand.id}/redemptions?limit=50`);
+
+    // Sanitize redemptions array to ensure all items are serializable
+    redemptions = (redemptions || []).map((redemption) => ({
+      id: String(redemption.id || ""),
+      brandId: String(redemption.brandId || ""),
+      userId: String(redemption.userId || ""),
+      campaignId: redemption.campaignId ? String(redemption.campaignId) : undefined,
+      pointsUsed: Number(redemption.pointsUsed || 0),
+      status: redemption.status as "pending" | "completed" | "cancelled",
+      metadata: redemption.metadata || undefined,
+      createdAt: String(redemption.createdAt || ""),
+      updatedAt: String(redemption.updatedAt || ""),
+      user: redemption.user
+        ? {
+            id: String(redemption.user.id || ""),
+            email: redemption.user.email ? String(redemption.user.email) : undefined,
+            phone: redemption.user.phone ? String(redemption.user.phone) : undefined,
+          }
+        : undefined,
+      campaign: redemption.campaign
+        ? {
+            id: String(redemption.campaign.id || ""),
+            name: String(redemption.campaign.name || ""),
+          }
+        : undefined,
+    }));
   } catch (err: any) {
-    // Ensure this is always a plain string
-    if (err && typeof err === "object") {
-      errorMessage = (err.message as string) || JSON.stringify(err);
+    // Ensure this is always a plain string - never pass the error object
+    if (err && typeof err === "object" && err !== null) {
+      if ("message" in err && typeof err.message === "string") {
+        errorMessage = err.message;
+      } else {
+        const keys = Object.keys(err);
+        if (keys.length === 0) {
+          errorMessage = "An unknown error occurred";
+        } else {
+          errorMessage = JSON.stringify(err);
+        }
+      }
     } else {
-      errorMessage = String(err);
+      errorMessage = String(err || "Unknown error");
     }
+    // Clear data to prevent passing non-serializable objects
+    brand = null;
+    redemptions = [];
   }
 
   if (errorMessage) {

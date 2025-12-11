@@ -32,13 +32,42 @@ export default async function MembersPage() {
     membersData = await adminApiFetch<BrandMembersResponse>(
       `/brands/${brand.id}/members?page=1&pageSize=100`
     );
-  } catch (err: any) {
-    // Ensure this is always a plain string
-    if (err && typeof err === "object") {
-      errorMessage = (err.message as string) || JSON.stringify(err);
-    } else {
-      errorMessage = String(err);
+
+    // Sanitize membersData to ensure all properties are serializable
+    if (membersData) {
+      membersData = {
+        brandId: String(membersData.brandId || ""),
+        page: Number(membersData.page || 1),
+        pageSize: Number(membersData.pageSize || 0),
+        total: Number(membersData.total || 0),
+        members: (membersData.members || []).map((member) => ({
+          id: String(member.id || ""),
+          userId: String(member.userId || ""),
+          email: member.email ? String(member.email) : undefined,
+          role: member.role as "OWNER" | "MANAGER" | "VIEWER",
+          joinedAt: String(member.joinedAt || ""),
+        })),
+      };
     }
+  } catch (err: any) {
+    // Ensure this is always a plain string - never pass the error object
+    if (err && typeof err === "object" && err !== null) {
+      if ("message" in err && typeof err.message === "string") {
+        errorMessage = err.message;
+      } else {
+        const keys = Object.keys(err);
+        if (keys.length === 0) {
+          errorMessage = "An unknown error occurred";
+        } else {
+          errorMessage = JSON.stringify(err);
+        }
+      }
+    } else {
+      errorMessage = String(err || "Unknown error");
+    }
+    // Clear data to prevent passing non-serializable objects
+    brand = null;
+    membersData = null;
   }
 
   if (errorMessage) {
