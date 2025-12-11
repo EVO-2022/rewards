@@ -565,6 +565,9 @@ video {
 .h-16 {
   height: 4rem;
 }
+.max-h-32 {
+  max-height: 8rem;
+}
 .min-h-screen {
   min-height: 100vh;
 }
@@ -747,6 +750,9 @@ video {
 .bg-yellow-50 {
   --tw-bg-opacity: 1;
   background-color: rgb(254 252 232 / var(--tw-bg-opacity, 1));
+}
+.p-2 {
+  padding: 0.5rem;
 }
 .p-3 {
   padding: 0.75rem;

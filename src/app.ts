@@ -9,6 +9,7 @@ import webhookRoutes from "./routes/webhookRoutes";
 import pointsRoutes from "./routes/pointsRoutes";
 import apiKeyRoutes from "./routes/apiKeyRoutes";
 import integrationRoutes from "./routes/integrationRoutes";
+import redemptionRoutes from "./routes/redemptionRoutes";
 import testWebhookRoutes from "./routes/testWebhookRoutes";
 import * as brandController from "./controllers/brandController";
 import * as pointsController from "./controllers/pointsController";
@@ -292,6 +293,7 @@ export function createApp() {
   app.use("/api/brands", brandRoutes);
   app.use("/api/brands", apiKeyRoutes);
   app.use("/api/brands", webhookRoutes);
+  app.use("/api/brands", redemptionRoutes);
   app.use("/api", pointsRoutes);
   // Note: /api/integration is mounted earlier, before auth middleware
 

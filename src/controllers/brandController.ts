@@ -498,12 +498,14 @@ export const getBrandEvents = async (req: Request, res: Response) => {
     const items = events.map(
       (event: {
         id: string;
+        brandId: string;
         eventName: string;
         externalUserId: string | null;
         metadata: unknown;
         createdAt: Date;
       }) => ({
         id: event.id,
+        brandId: event.brandId,
         eventName: event.eventName,
         externalUserId: event.externalUserId,
         metadata: event.metadata,
