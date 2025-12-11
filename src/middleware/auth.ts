@@ -1,7 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import { clerkClient, requireAuth } from "@clerk/express";
+import { createClerkClient, verifyToken } from "@clerk/backend";
 import { prisma } from "../utils/prisma";
 import { BrandRole } from "@prisma/client";
+
+// Create Clerk client instance
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY,
+});
 
 /**
  * Authentication middleware
@@ -41,35 +46,55 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     authHeaderType: authHeader ? (authHeader.startsWith("Bearer ") ? "Bearer" : "Other") : "None",
   });
 
-  // Use Clerk's requireAuth middleware
-  // Wrap in try-catch to handle errors
-  try {
-    return requireAuth()(req, res, (err?: any) => {
-      if (err) {
-        console.error("❌ Clerk authentication error:", {
-          error: err.message || String(err),
-          path: req.path,
-          method: req.method,
-          hasAuthHeader: !!authHeader,
-          authHeaderPrefix: authHeader ? authHeader.substring(0, 30) + "..." : "None",
-        });
-        return res.status(401).json({
-          error: "Unauthorized",
-          details: "Invalid or missing authentication token",
-          hint: "Ensure you're sending a valid Clerk session token in the Authorization header as: Authorization: Bearer <token>",
-        });
-      }
-      // Success - log the authenticated user
-      if (req.auth?.userId) {
-        console.log("✅ Authenticated user:", req.auth.userId);
-      }
-      next();
+  // Extract token from Authorization header
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("❌ Missing or invalid Authorization header");
+    return res.status(401).json({
+      error: "Unauthorized",
+      details: "Missing or invalid authentication token",
+      hint: "Ensure you're sending a valid Clerk session token in the Authorization header as: Authorization: Bearer <token>",
     });
+  }
+
+  const token = authHeader.substring(7);
+
+  // Verify token using @clerk/backend
+  try {
+    const { userId, sessionId } = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY!,
+    });
+
+    if (!userId) {
+      console.error("❌ Token verification failed: no userId");
+      return res.status(401).json({
+        error: "Unauthorized",
+        details: "Invalid authentication token",
+        hint: "Ensure you're sending a valid Clerk session token in the Authorization header as: Authorization: Bearer <token>",
+      });
+    }
+
+    // Success - log the authenticated user
+    console.log("✅ Authenticated user:", userId);
+
+    // Attach auth info to request
+    req.auth = {
+      userId,
+      sessionId,
+    };
+
+    next();
   } catch (error) {
-    console.error("❌ Authentication middleware error:", error);
-    return res.status(500).json({
-      error: "Authentication error",
-      details: error instanceof Error ? error.message : "Unknown error",
+    console.error("❌ Clerk authentication error:", {
+      error: error instanceof Error ? error.message : String(error),
+      path: req.path,
+      method: req.method,
+      hasAuthHeader: !!authHeader,
+      authHeaderPrefix: authHeader ? authHeader.substring(0, 30) + "..." : "None",
+    });
+    return res.status(401).json({
+      error: "Unauthorized",
+      details: "Invalid or missing authentication token",
+      hint: "Ensure you're sending a valid Clerk session token in the Authorization header as: Authorization: Bearer <token>",
     });
   }
 };
