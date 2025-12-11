@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
 
+// Force dynamic rendering since we use auth() which requires headers()
+export const dynamic = "force-dynamic";
+
 const navItems = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/members", label: "Members" },
@@ -11,7 +14,30 @@ const navItems = [
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { userId } = await auth();
+  let userId: string | null = null;
+
+  try {
+    const authResult = await auth();
+    userId = authResult?.userId || null;
+  } catch (error: unknown) {
+    // Safely handle auth errors - convert to string to avoid serialization issues
+    // Never pass the error object itself, only convert to string for logging
+    let errorMsg = "Authentication error";
+    if (error) {
+      if (typeof error === "object" && error !== null) {
+        if ("message" in error && typeof error.message === "string") {
+          errorMsg = error.message;
+        } else if ("toString" in error && typeof error.toString === "function") {
+          errorMsg = error.toString();
+        }
+      } else {
+        errorMsg = String(error);
+      }
+    }
+    console.error("Auth error in layout:", errorMsg);
+    // Redirect to sign-in on auth failure
+    redirect("/sign-in");
+  }
 
   if (!userId) {
     redirect("/sign-in");

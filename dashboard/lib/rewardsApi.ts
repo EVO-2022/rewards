@@ -17,8 +17,37 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
     throw error;
   }
 
-  const { getToken } = await auth();
-  const token = await getToken();
+  let token: string | null = null;
+
+  try {
+    const authResult = await auth();
+    if (authResult?.getToken) {
+      token = await authResult.getToken();
+    }
+  } catch (authError: unknown) {
+    // Safely handle auth errors - convert to string to avoid serialization issues
+    // Never pass the error object itself, only convert to string for logging
+    let errorMsg = "Authentication error";
+    if (authError) {
+      if (typeof authError === "object" && authError !== null) {
+        if ("message" in authError && typeof authError.message === "string") {
+          errorMsg = authError.message;
+        } else if ("toString" in authError && typeof authError.toString === "function") {
+          errorMsg = authError.toString();
+        }
+      } else {
+        errorMsg = String(authError);
+      }
+    }
+    console.error("Auth error in adminApiFetch:", errorMsg);
+    // Throw a plain object that's guaranteed to be serializable
+    const error: { status: number; statusText: string; message: string } = {
+      status: 401,
+      statusText: "Unauthorized",
+      message: "Authentication failed",
+    };
+    throw error;
+  }
 
   if (!token) {
     const error: { status: number; statusText: string; message: string } = {
