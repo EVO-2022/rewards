@@ -5,6 +5,9 @@ import { CreateBrandForm } from "@/components/CreateBrandForm";
 import { getFirstBrand } from "@/lib/brandHelper";
 import { adminApiFetch } from "@/lib/rewardsApi";
 
+// Force dynamic rendering since we use auth() which requires headers()
+export const dynamic = "force-dynamic";
+
 function formatDate(dateString: string | null): string {
   if (!dateString) return "Never";
   const date = new Date(dateString);

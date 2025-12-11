@@ -1,5 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 
+// Force dynamic rendering since we use auth() which requires headers()
+export const dynamic = "force-dynamic";
+
 export default async function DebugMePage() {
   const authData = await auth();
 
