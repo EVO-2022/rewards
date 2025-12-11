@@ -4,33 +4,64 @@ import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { getFirstBrand } from "@/lib/brandHelper";
 
-async function getRedemptions(brandId: string): Promise<Redemption[]> {
-  try {
-    return await adminApiFetch<Redemption[]>(`/brands/${brandId}/redemptions?limit=50`);
-  } catch (error) {
-    console.error("Failed to fetch redemptions:", error);
-    return [];
-  }
-}
-
 export default async function RedemptionsPage() {
-  const brand = await getFirstBrand();
+  let brand = null;
+  let errorMessage: string | null = null;
+  let redemptions: Redemption[] = [];
 
-  if (!brand) {
+  try {
+    brand = await getFirstBrand();
+
+    if (!brand) {
+      return (
+        <div>
+          <PageHeader title="Redemptions" />
+          <Card>
+            <div className="text-center py-12">
+              <p className="text-lg font-medium text-gray-900 mb-2">
+                You don't have any brands yet.
+              </p>
+              <p className="text-gray-600">Brand creation UI will go here.</p>
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
+    redemptions = await adminApiFetch<Redemption[]>(`/brands/${brand.id}/redemptions?limit=50`);
+  } catch (err: any) {
+    // Ensure this is always a plain string
+    if (err && typeof err === "object") {
+      errorMessage = (err.message as string) || JSON.stringify(err);
+    } else {
+      errorMessage = String(err);
+    }
+  }
+
+  if (errorMessage) {
     return (
       <div>
         <PageHeader title="Redemptions" />
         <Card>
-          <div className="text-center py-12">
-            <p className="text-lg font-medium text-gray-900 mb-2">You don't have any brands yet.</p>
-            <p className="text-gray-600">Brand creation UI will go here.</p>
+          <div className="p-6">
+            <h1 className="text-xl font-semibold text-red-600 mb-2">Error Loading Redemptions</h1>
+            <p className="text-gray-700">{errorMessage}</p>
           </div>
         </Card>
       </div>
     );
   }
 
-  const redemptions = await getRedemptions(brand.id);
+  if (!brand) {
+    return (
+      <div>
+        <PageHeader title="Redemptions" />
+        <Card>
+          <p className="text-gray-600">Failed to load redemptions.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>
