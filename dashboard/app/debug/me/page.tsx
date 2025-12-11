@@ -32,7 +32,15 @@ export default async function DebugMePage() {
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-2">Full Auth Object:</h2>
         <pre className="bg-gray-100 p-4 rounded overflow-auto text-xs">
-          {JSON.stringify(authData, null, 2)}
+          {JSON.stringify(
+            {
+              userId: authData.userId,
+              sessionId: authData.sessionId,
+              orgId: authData.orgId,
+            },
+            null,
+            2
+          )}
         </pre>
       </div>
     </div>
