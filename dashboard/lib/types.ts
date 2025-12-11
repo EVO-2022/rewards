@@ -93,3 +93,22 @@ export interface RewardLedger {
   metadata?: Record<string, any>;
   createdAt: string;
 }
+
+export interface AdminEventLogItem {
+  id: string;
+  brandId: string;
+  externalUserId: string | null;
+  eventName: string;
+  metadata: Record<string, any> | null;
+  createdAt: string; // ISO string
+}
+
+export interface AdminEventListResponse {
+  status: "ok";
+  brandId: string;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+  items: AdminEventLogItem[];
+}

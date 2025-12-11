@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import type { AdminEventListResponse } from "./types";
 
 const REWARDS_API_URL = process.env.NEXT_PUBLIC_REWARDS_API_URL || "http://localhost:3000/api";
 
@@ -130,4 +131,16 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
   }
 
   return res.json() as Promise<T>;
+}
+
+/**
+ * Fetch brand events from the admin API
+ */
+export async function getBrandEvents(brandId: string, page = 1, pageSize = 50) {
+  const query = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  }).toString();
+
+  return adminApiFetch<AdminEventListResponse>(`/brands/${brandId}/events?${query}`);
 }

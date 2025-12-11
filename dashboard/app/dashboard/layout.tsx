@@ -11,6 +11,7 @@ const navItems = [
   { href: "/dashboard/members", label: "Members" },
   { href: "/dashboard/redemptions", label: "Redemptions" },
   { href: "/dashboard/api-keys", label: "API Keys" },
+  { href: "/dashboard/events", label: "Events" },
   { href: "/dashboard/developers", label: "Developers" },
 ];
 
