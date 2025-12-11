@@ -373,6 +373,76 @@ Monthly billing logic is stubbed at $99/brand. Full payment integration is not i
 - User creation from webhooks creates temporary Clerk IDs. In production, integrate with Clerk user creation.
 - Brand determination from webhooks defaults to the first active brand. In production, use webhook signatures or metadata.
 
+## Dashboard (Admin UI)
+
+The dashboard is a Next.js 15+ admin interface for managing brands, members, redemptions, and API keys.
+
+### Dashboard Setup
+
+1. **Navigate to dashboard directory:**
+   ```bash
+   cd dashboard
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables:**
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+   Edit `.env.local` and set:
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - From your Clerk dashboard
+   - `CLERK_SECRET_KEY` - From your Clerk dashboard
+   - `NEXT_PUBLIC_REWARDS_API_URL` - Set to `http://localhost:3000/api` for local development
+
+4. **Start the dashboard:**
+   ```bash
+   npm run dev
+   ```
+
+   The dashboard will be available at `http://localhost:3001` (or next available port)
+
+### Running Dashboard + API Locally
+
+**Terminal 1 - Start API:**
+```bash
+# From repo root
+npm run dev
+```
+
+**Terminal 2 - Start Dashboard:**
+```bash
+# From dashboard directory
+cd dashboard
+npm run dev
+```
+
+### Dashboard Features
+
+- **Overview**: Brand statistics, total members, points issued/redeemed
+- **Members**: List and search brand members
+- **Redemptions**: View redemption history
+- **API Keys**: Create and manage brand API keys for integrations
+
+### Dashboard Pages
+
+- `/` - Landing page with sign-in
+- `/dashboard` - Overview with brand stats
+- `/dashboard/members` - Member management
+- `/dashboard/redemptions` - Redemption history
+- `/dashboard/api-keys` - API key management
+
+### Notes
+
+- The dashboard uses Clerk for authentication (same as the API)
+- All API calls are authenticated using Clerk JWT tokens
+- For MVP, the dashboard uses the first brand from the user's brand list
+- Future enhancements: brand selection, pagination, advanced filtering
+
 ## License
 
 ISC
