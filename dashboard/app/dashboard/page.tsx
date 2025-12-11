@@ -1,6 +1,7 @@
 import { BrandSummary } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
+import { getFirstBrand } from "@/lib/brandHelper";
 
 async function getBrandSummary(brandId: string): Promise<BrandSummary | null> {
   try {
@@ -25,26 +26,29 @@ function formatDate(dateString: string | null): string {
 }
 
 export default async function DashboardPage() {
-  const brandId = process.env.NEXT_PUBLIC_BRAND_ID!;
+  const brand = await getFirstBrand();
 
-  if (!brandId) {
+  if (!brand) {
     return (
       <div>
         <PageHeader title="Dashboard" />
         <Card>
-          <p className="text-gray-600">
-            NEXT_PUBLIC_BRAND_ID is not configured. Please set it in your environment variables.
-          </p>
+          <div className="text-center py-12">
+            <p className="text-lg font-medium text-gray-900 mb-2">You don't have any brands yet.</p>
+            <p className="text-gray-600">
+              Once you create your first brand, you'll see stats, members, and redemptions here.
+            </p>
+          </div>
         </Card>
       </div>
     );
   }
 
-  const summary = await getBrandSummary(brandId);
+  const summary = await getBrandSummary(brand.id);
 
   return (
     <div>
-      <PageHeader title={summary?.name || "Dashboard"} description={`${summary?.slug || ""} • Overview`} />
+      <PageHeader title={brand.name} description={`${brand.slug} • Overview`} />
 
       {summary ? (
         <>

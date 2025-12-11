@@ -14,27 +14,29 @@ async function getApiKeys(brandId: string): Promise<BrandApiKey[]> {
 }
 
 export default async function ApiKeysPage() {
-  const brandId = process.env.NEXT_PUBLIC_BRAND_ID;
-  const selectedBrand = brandId ? { id: brandId } : await getFirstBrand();
+  const brand = await getFirstBrand();
 
-  if (!selectedBrand) {
+  if (!brand) {
     return (
       <div>
         <PageHeader title="API Keys" />
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-gray-600">No brands found.</p>
+          <div className="text-center py-12">
+            <p className="text-lg font-medium text-gray-900 mb-2">You don't have any brands yet.</p>
+            <p className="text-gray-600">Brand creation UI will go here.</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  const apiKeys = await getApiKeys(selectedBrand.id);
+  const apiKeys = await getApiKeys(brand.id);
 
   return (
     <div>
-      <PageHeader title="API Keys" description={apiKeys.length > 0 ? `Brand: ${apiKeys[0].brandId}` : "API Keys"} />
+      <PageHeader title="API Keys" description={`Brand: ${brand.name}`} />
 
-      <ApiKeysTable brandId={selectedBrand.id} initialKeys={apiKeys} />
+      <ApiKeysTable brandId={brand.id} initialKeys={apiKeys} />
     </div>
   );
 }

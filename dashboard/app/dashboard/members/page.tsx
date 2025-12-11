@@ -17,25 +17,27 @@ async function getBrandMembers(brandId: string): Promise<BrandMembersResponse | 
 }
 
 export default async function MembersPage() {
-  const brandId = process.env.NEXT_PUBLIC_BRAND_ID;
-  const selectedBrand = brandId ? { id: brandId } : await getFirstBrand();
+  const brand = await getFirstBrand();
 
-  if (!selectedBrand) {
+  if (!brand) {
     return (
       <div>
         <PageHeader title="Members" />
         <Card>
-          <p className="text-gray-600">No brands found.</p>
+          <div className="text-center py-12">
+            <p className="text-lg font-medium text-gray-900 mb-2">You don't have any brands yet.</p>
+            <p className="text-gray-600">Brand creation UI will go here.</p>
+          </div>
         </Card>
       </div>
     );
   }
 
-  const membersData = await getBrandMembers(selectedBrand.id);
+  const membersData = await getBrandMembers(brand.id);
 
   return (
     <div>
-      <PageHeader title="Members" description={membersData ? `Brand: ${membersData.brandId}` : "Members"} />
+      <PageHeader title="Members" description={`Brand: ${brand.name}`} />
 
       {membersData ? (
         <Card>

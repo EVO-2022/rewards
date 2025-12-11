@@ -41,7 +41,8 @@ export async function adminApiFetch<T>(path: string, options?: RequestInit): Pro
       errorMessage = text || errorMessage;
     }
 
-    throw new Error(errorMessage);
+    console.error(errorMessage);
+    throw new Error(JSON.stringify({ status: res.status, message: errorMessage }));
   }
 
   return res.json() as Promise<T>;
