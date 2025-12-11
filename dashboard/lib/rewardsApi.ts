@@ -67,24 +67,29 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
       }
     } catch (readError) {
       // If we can't read the response, use status-based message
-      console.error("Failed to read error response:", readError);
+      const readErrorMsg = readError instanceof Error ? readError.message : String(readError);
+      console.error("Failed to read error response:", readErrorMsg);
     }
 
-    // Create a plain object literal (not Object.create(null)) with only serializable primitives
-    const errorPayload: { status: number; statusText: string; message: string; path?: string } = {
-      status: Number(res.status),
-      statusText: String(res.statusText || "Unknown"),
-      message: errorMessage,
-      path: path,
-    };
+    // Create a plain object literal with only serializable primitives
+    const statusCode = Number(res.status) || 500;
+    const statusTextValue = String(res.statusText || "Unknown");
+    const messageValue = String(errorMessage || `Admin API error ${statusCode}`);
+    const pathValue = String(path || "");
 
-    console.error("Admin API error:", {
-      status: errorPayload.status,
-      statusText: errorPayload.statusText,
-      message: errorPayload.message,
-      path: errorPayload.path,
-      url: url,
-    });
+    // Log error details separately to avoid serialization issues
+    console.error(`Admin API error [${statusCode}]: ${messageValue}`);
+    console.error(`  Path: ${pathValue}`);
+    console.error(`  URL: ${url}`);
+    console.error(`  Status: ${statusTextValue}`);
+
+    // Create error payload with explicit values
+    const errorPayload: { status: number; statusText: string; message: string; path: string } = {
+      status: statusCode,
+      statusText: statusTextValue,
+      message: messageValue,
+      path: pathValue,
+    };
 
     // Throw a plain object that's guaranteed to be serializable
     throw errorPayload;
