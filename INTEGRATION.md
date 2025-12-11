@@ -143,7 +143,70 @@ curl -X POST "https://rewards-production-a600.up.railway.app/api/integration/poi
 
 ---
 
-### GET /users/:externalUserId/balance
+### GET /points/balance
+
+Get the current point balance for a user identified by an external user ID.
+
+**Headers:**
+- `Authorization: Bearer <api-key>` or `X-API-Key: <api-key>`
+
+**Query Parameters:**
+- `externalUserId` (string, required) - Your brand's identifier for this user. Must be non-empty.
+
+**Response (200 OK):**
+
+If user exists and has points:
+```json
+{
+  "status": "ok",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "userId": "46d521bb-1d84-4baf-a743-f536e1f5b31d",
+  "externalUserId": "user-123",
+  "balance": 250
+}
+```
+
+If user has never earned points (doesn't exist in system):
+```json
+{
+  "status": "ok",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "userId": null,
+  "externalUserId": "user-123",
+  "balance": 0
+}
+```
+
+**Note:** A balance of 0 with `userId: null` means the user has never earned points. This is not an error condition.
+
+**Error Responses:**
+- `400` - Validation error (missing or empty externalUserId)
+  ```json
+  {
+    "error": "Validation error",
+    "details": [
+      {
+        "path": ["externalUserId"],
+        "message": "externalUserId is required and must be non-empty"
+      }
+    ]
+  }
+  ```
+- `401` - Missing or invalid API key
+- `403` - Brand is inactive or suspended
+- `500` - Internal server error
+
+**Example Request:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/points/balance?externalUserId=customer-123" \
+  -H "Authorization: Bearer rk_..."
+```
+
+---
+
+### GET /users/:externalUserId/balance (Legacy)
+
+**Note:** This endpoint uses path parameters instead of query parameters. The `/points/balance` endpoint above is the recommended approach.
 
 Get the current point balance for a user identified by an external user ID.
 
@@ -168,7 +231,7 @@ If the user doesn't exist, returns balance 0:
 {
   "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
   "externalUserId": "user-123",
-  "userId": null,
+  "userId": undefined,
   "balance": 0
 }
 ```

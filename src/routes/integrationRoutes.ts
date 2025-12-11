@@ -31,6 +31,22 @@ router.get("/whoami", async (req, res) => {
 });
 
 /**
+ * Find integration user by externalUserId
+ * Uses integration clerkId pattern: integration_{brandId}_{externalUserId}
+ * Returns null if user doesn't exist (doesn't create)
+ */
+async function findIntegrationUser(
+  brandId: string,
+  externalUserId: string
+): Promise<{ id: string } | null> {
+  const integrationClerkId = `integration_${brandId}_${externalUserId}`;
+  
+  return await prisma.user.findUnique({
+    where: { clerkId: integrationClerkId },
+  });
+}
+
+/**
  * Find or create a user for integration
  * Uses integration clerkId pattern: integration_{brandId}_{externalUserId}
  */
@@ -38,19 +54,14 @@ async function findOrCreateIntegrationUser(
   brandId: string,
   externalUserId: string
 ): Promise<{ id: string }> {
-  // Create integration user with special clerkId pattern
-  const integrationClerkId = `integration_${brandId}_${externalUserId}`;
-  
-  // Check if user already exists with this clerkId
-  const existingIntegrationUser = await prisma.user.findUnique({
-    where: { clerkId: integrationClerkId },
-  });
-
-  if (existingIntegrationUser) {
-    return existingIntegrationUser;
+  // Try to find existing user first
+  const existing = await findIntegrationUser(brandId, externalUserId);
+  if (existing) {
+    return existing;
   }
 
   // Create new user
+  const integrationClerkId = `integration_${brandId}_${externalUserId}`;
   return await prisma.user.create({
     data: {
       clerkId: integrationClerkId,
@@ -116,16 +127,65 @@ router.post("/points/issue", validate(issuePointsSchema), async (req, res) => {
   }
 });
 
+// Balance check endpoint with query parameter
+const balanceQuerySchema = z.object({
+  externalUserId: z.string().min(1, "externalUserId is required and must be non-empty"),
+});
+
+router.get("/points/balance", async (req, res) => {
+  try {
+    const { brandId } = req.integrationAuth!;
+    
+    // Validate query parameters
+    const queryParams = balanceQuerySchema.safeParse(req.query);
+    
+    if (!queryParams.success) {
+      return res.status(400).json({
+        error: "Validation error",
+        details: queryParams.error.errors,
+      });
+    }
+
+    const { externalUserId } = queryParams.data;
+
+    // Find user by externalUserId (don't create if doesn't exist)
+    const user = await findIntegrationUser(brandId, externalUserId);
+
+    // If user doesn't exist, return balance 0 (not an error)
+    if (!user) {
+      return res.json({
+        status: "ok",
+        brandId,
+        userId: null,
+        externalUserId,
+        balance: 0,
+      });
+    }
+
+    // Get balance using existing service
+    const balance = await rewardsEngine.getUserBalance(brandId, user.id);
+
+    res.json({
+      status: "ok",
+      brandId,
+      userId: user.id,
+      externalUserId,
+      balance,
+    });
+  } catch (error) {
+    console.error("Integration get balance error:", error);
+    res.status(500).json({ error: "Failed to fetch balance" });
+  }
+});
+
+// Legacy endpoint (path parameter) - kept for backward compatibility
 router.get("/users/:externalUserId/balance", async (req, res) => {
   try {
     const brandId = req.integrationAuth!.brandId;
     const { externalUserId } = req.params;
 
     // Find user by integration clerkId pattern
-    const integrationClerkId = `integration_${brandId}_${externalUserId}`;
-    const user = await prisma.user.findUnique({
-      where: { clerkId: integrationClerkId },
-    });
+    const user = await findIntegrationUser(brandId, externalUserId);
 
     // If user doesn't exist, return balance 0
     if (!user) {
