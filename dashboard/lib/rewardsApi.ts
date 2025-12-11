@@ -106,13 +106,16 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
     const messageValue = String(errorMessage || `Admin API error ${statusCode}`);
     const pathValue = String(path || "");
 
-    // Log error details in a single message to reduce console noise
-    console.error(
-      `Admin API error [${statusCode}]: ${messageValue}\n` +
-        `  Path: ${pathValue}\n` +
-        `  URL: ${url}\n` +
-        `  Status: ${statusTextValue}`
-    );
+    // Log error details in development only (errors are handled gracefully in UI)
+    // Use console.warn instead of console.error since these are handled, not fatal
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        `Admin API error [${statusCode}]: ${messageValue}\n` +
+          `  Path: ${pathValue}\n` +
+          `  URL: ${url}\n` +
+          `  Status: ${statusTextValue}`
+      );
+    }
 
     // Create error payload with explicit values
     const errorPayload: { status: number; statusText: string; message: string; path: string } = {
