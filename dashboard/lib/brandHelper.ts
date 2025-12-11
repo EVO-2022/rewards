@@ -59,11 +59,14 @@ export async function getFirstBrand(): Promise<Brand | null> {
     return sanitizeBrand(firstBrand);
   } catch (error) {
     // Log error details safely without passing non-serializable objects
+    // Use console.warn and only log in development (errors are handled gracefully in UI)
     const errorMsg =
       error && typeof error === "object" && "message" in error
         ? String(error.message)
         : String(error || "Unknown error");
-    console.error("Failed to fetch brands:", errorMsg);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Failed to fetch brands:", errorMsg);
+    }
     return null;
   }
 }
