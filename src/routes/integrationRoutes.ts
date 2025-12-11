@@ -5,6 +5,8 @@ import { z } from "zod";
 import { prisma } from "../utils/prisma";
 import { rewardsEngine } from "../services/rewardsEngine";
 import { fraudDetection } from "../services/fraudDetection";
+import { LedgerType } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const router = Router();
 
@@ -175,6 +177,108 @@ router.get("/points/balance", async (req, res) => {
   } catch (error) {
     console.error("Integration get balance error:", error);
     res.status(500).json({ error: "Failed to fetch balance" });
+  }
+});
+
+// Redemption endpoint
+const redeemPointsSchema = z.object({
+  externalUserId: z.string().min(1, "externalUserId is required and must be non-empty"),
+  points: z.number().int("points must be an integer").positive("points must be a positive integer"),
+  reason: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+router.post("/points/redeem", validate(redeemPointsSchema), async (req, res) => {
+  try {
+    const { brandId, apiKeyId } = req.integrationAuth!;
+    const data = redeemPointsSchema.parse(req.body);
+
+    // Find or create user by externalUserId
+    const user = await findOrCreateIntegrationUser(brandId, data.externalUserId);
+
+    // Get current balance
+    const currentBalance = await rewardsEngine.getUserBalance(brandId, user.id);
+
+    // Check if user has sufficient balance
+    if (data.points > currentBalance) {
+      return res.status(400).json({
+        status: "error",
+        code: "INSUFFICIENT_POINTS",
+        message: "User does not have enough points to redeem",
+        required: data.points,
+        available: currentBalance,
+      });
+    }
+
+    // Perform atomic transaction: create redemption + burn points
+    const result = await prisma.$transaction(async (tx) => {
+      // Create redemption record
+      const redemption = await tx.redemption.create({
+        data: {
+          brandId,
+          userId: user.id,
+          campaignId: null,
+          pointsUsed: new Decimal(data.points),
+          status: "completed",
+          metadata: {
+            externalUserId: data.externalUserId,
+            source: "api_integration",
+            apiKeyId: apiKeyId,
+            reason: data.reason || "integration_redeem",
+            ...(data.metadata || {}),
+          },
+        },
+      });
+
+      // Create ledger entry (burn points)
+      const ledger = await tx.rewardLedger.create({
+        data: {
+          brandId,
+          userId: user.id,
+          type: LedgerType.BURN,
+          amount: new Decimal(data.points),
+          reason: data.reason || "integration_redeem",
+          metadata: {
+            redemptionId: redemption.id,
+            externalUserId: data.externalUserId,
+            source: "api_integration",
+            apiKeyId: apiKeyId,
+            ...(data.metadata || {}),
+          },
+        },
+      });
+
+      return { redemption, ledger };
+    });
+
+    // Calculate new balance (currentBalance - points)
+    const newBalance = currentBalance - data.points;
+
+    res.status(200).json({
+      status: "ok",
+      brandId,
+      userId: user.id,
+      externalUserId: data.externalUserId,
+      pointsRedeemed: data.points,
+      newBalance,
+      redemptionId: result.redemption.id,
+      ledgerEntryId: result.ledger.id,
+    });
+  } catch (error) {
+    console.error("Integration redeem points error:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        status: "error",
+        code: "INVALID_REQUEST",
+        message: "Validation error",
+        details: error.errors,
+      });
+    }
+    res.status(500).json({
+      status: "error",
+      code: "INTERNAL_ERROR",
+      message: "Something went wrong",
+    });
   }
 });
 

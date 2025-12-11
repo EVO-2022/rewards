@@ -143,6 +143,124 @@ curl -X POST "https://rewards-production-a600.up.railway.app/api/integration/poi
 
 ---
 
+### POST /points/redeem
+
+Redeem points for a user identified by an external user ID. Points are deducted from the user's balance and a redemption record is created.
+
+**Headers:**
+- `Authorization: Bearer <api-key>` or `X-API-Key: <api-key>`
+- `Content-Type: application/json`
+
+**Request Body:**
+```json
+{
+  "externalUserId": "user-123",
+  "points": 20,
+  "reason": "test_redemption",
+  "metadata": {
+    "orderId": "ORD-456",
+    "source": "integration-test"
+  }
+}
+```
+
+**Field Descriptions:**
+- `externalUserId` (string, required) - Your brand's identifier for this user. Must be non-empty.
+- `points` (number, required) - Number of points to redeem. Must be a positive integer (>= 1).
+- `reason` (string, optional) - Descriptive reason for the redemption. Defaults to "integration_redeem" if not provided.
+- `metadata` (object, optional) - Additional context stored with the redemption and ledger entry.
+
+**Response (200 OK):**
+```json
+{
+  "status": "ok",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "userId": "46d521bb-1d84-4baf-a743-f536e1f5b31d",
+  "externalUserId": "user-123",
+  "pointsRedeemed": 20,
+  "newBalance": 80,
+  "redemptionId": "redemption-uuid",
+  "ledgerEntryId": "ledger-entry-uuid"
+}
+```
+
+**Error Responses:**
+
+**Insufficient Points (400):**
+```json
+{
+  "status": "error",
+  "code": "INSUFFICIENT_POINTS",
+  "message": "User does not have enough points to redeem",
+  "required": 100,
+  "available": 50
+}
+```
+
+**Validation Error (400):**
+```json
+{
+  "status": "error",
+  "code": "INVALID_REQUEST",
+  "message": "Validation error",
+  "details": [
+    {
+      "path": ["points"],
+      "message": "points must be a positive integer"
+    }
+  ]
+}
+```
+
+**Other Errors:**
+- `401` - Missing or invalid API key
+- `403` - Brand is inactive or suspended
+- `500` - Internal server error
+  ```json
+  {
+    "status": "error",
+    "code": "INTERNAL_ERROR",
+    "message": "Something went wrong"
+  }
+  ```
+
+**Example Request:**
+```bash
+curl -X POST "https://rewards-production-a600.up.railway.app/api/integration/points/redeem" \
+  -H "Authorization: Bearer rk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "externalUserId": "customer-123",
+    "points": 20,
+    "reason": "purchase_redemption",
+    "metadata": {
+      "orderId": "order-456"
+    }
+  }'
+```
+
+**Example Response:**
+```json
+{
+  "status": "ok",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "userId": "46d521bb-1d84-4baf-a743-f536e1f5b31d",
+  "externalUserId": "customer-123",
+  "pointsRedeemed": 20,
+  "newBalance": 80,
+  "redemptionId": "abc123-def456-ghi789",
+  "ledgerEntryId": "xyz789-abc123-def456"
+}
+```
+
+**Notes:**
+- Redemptions are processed atomically (transaction). If either the redemption record or ledger entry creation fails, both are rolled back.
+- The user is automatically created if they don't exist (same as the issue endpoint).
+- Points are burned immediately and the redemption status is set to "completed".
+- The `newBalance` is calculated as the previous balance minus the redeemed points.
+
+---
+
 ### GET /points/balance
 
 Get the current point balance for a user identified by an external user ID.
