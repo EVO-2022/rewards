@@ -1,5 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
-import { REWARDS_API_URL } from "./config";
+
+const REWARDS_API_URL =
+  process.env.NEXT_PUBLIC_REWARDS_API_URL || "http://localhost:3000/api";
+
+if (!REWARDS_API_URL) {
+  throw new Error("NEXT_PUBLIC_REWARDS_API_URL is not set");
+}
 
 /**
  * Server-side API client for the Rewards API
