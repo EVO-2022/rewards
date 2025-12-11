@@ -1,4 +1,4 @@
-import { BrandSummary } from "@/lib/types";
+import { BrandSummary, Brand } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { getFirstBrand } from "@/lib/brandHelper";
@@ -17,7 +17,7 @@ function formatDate(dateString: string | null): string {
 }
 
 export default async function DashboardPage() {
-  let brand = null;
+  let brand: Brand | null = null;
   let errorMessage: string | null = null;
   let summary: BrandSummary | null = null;
 
@@ -41,14 +41,28 @@ export default async function DashboardPage() {
       );
     }
 
+    // Ensure brand is fully serializable before using
+    brand = {
+      id: String(brand.id),
+      name: String(brand.name),
+      slug: String(brand.slug),
+      description: brand.description ? String(brand.description) : undefined,
+      isActive: Boolean(brand.isActive),
+      createdAt: String(brand.createdAt),
+      role: brand.role ? (brand.role as "OWNER" | "MANAGER" | "VIEWER") : undefined,
+      joinedAt: brand.joinedAt ? String(brand.joinedAt) : undefined,
+    };
+
     summary = await adminApiFetch<BrandSummary>(`/brands/${brand.id}/summary`);
   } catch (err: any) {
-    // Ensure this is always a plain string
-    if (err && typeof err === "object") {
-      errorMessage = (err.message as string) || JSON.stringify(err);
+    // Ensure this is always a plain string - never pass the error object
+    if (err && typeof err === "object" && err !== null) {
+      errorMessage = String(err.message || JSON.stringify(err));
     } else {
-      errorMessage = String(err);
+      errorMessage = String(err || "Unknown error");
     }
+    // Clear brand to prevent passing non-serializable data
+    brand = null;
   }
 
   if (errorMessage) {
