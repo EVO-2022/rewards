@@ -9,6 +9,7 @@ import webhookRoutes from "./routes/webhookRoutes";
 import pointsRoutes from "./routes/pointsRoutes";
 import apiKeyRoutes from "./routes/apiKeyRoutes";
 import integrationRoutes from "./routes/integrationRoutes";
+import testWebhookRoutes from "./routes/testWebhookRoutes";
 import * as brandController from "./controllers/brandController";
 import * as pointsController from "./controllers/pointsController";
 import * as redemptionController from "./controllers/redemptionController";
@@ -275,9 +276,12 @@ export function createApp() {
   // API routes (Clerk-protected)
   app.use("/api/brands", brandRoutes);
   app.use("/api/brands", apiKeyRoutes);
-  app.use("/api/webhooks", webhookRoutes);
+  app.use("/api/brands", webhookRoutes);
   app.use("/api", pointsRoutes);
   // Note: /api/integration is mounted earlier, before auth middleware
+
+  // Test webhook receiver (guarded by SMOKE_TEST_BYPASS)
+  app.use(testWebhookRoutes);
 
 // ✅ HARD DEV BYPASS: direct brand access with ZERO auth or middleware
 app.get("/__dev/brands", async (_req, res) => {
