@@ -18,15 +18,24 @@ import { z } from "zod";
 export function createApp() {
   const app = express();
 
-  // Core middleware
+  // Core middleware (must run first)
   app.use(cors());
   app.use(express.json());
   app.use(morgan("dev"));
 
-  // Authentication middleware - applies to all routes except health check and test routes
+  // Mount integration routes EARLY - before any Clerk/auth middleware
+  // Integration routes use API key auth only, never Clerk
+  app.use("/api/integration", integrationRoutes);
+
+  // Authentication middleware - applies to all routes except health check, test routes, and integration routes
   app.use((req, res, next) => {
     // Skip auth for health check
     if (req.path === "/health") {
+      return next();
+    }
+    
+    // Skip auth for integration routes (they use API key auth)
+    if (req.path.startsWith("/api/integration")) {
       return next();
     }
     
@@ -43,8 +52,9 @@ export function createApp() {
 
   // Sync authenticated users to database (runs after auth)
   app.use((req, res, next) => {
-    // Skip sync for health check and test routes
+    // Skip sync for health check, integration routes, and test routes
     if (req.path === "/health" || 
+        req.path.startsWith("/api/integration") ||
         (process.env.SMOKE_TEST_BYPASS === "true" && 
          (req.path.startsWith("/api/__test") || req.path.startsWith("/__test")))) {
       return next();
@@ -262,12 +272,12 @@ export function createApp() {
     }
   });
 
-  // API routes
+  // API routes (Clerk-protected)
   app.use("/api/brands", brandRoutes);
   app.use("/api/brands", apiKeyRoutes);
   app.use("/api/webhooks", webhookRoutes);
   app.use("/api", pointsRoutes);
-  app.use("/api/integration", integrationRoutes);
+  // Note: /api/integration is mounted earlier, before auth middleware
 
 // ✅ HARD DEV BYPASS: direct brand access with ZERO auth or middleware
 app.get("/__dev/brands", async (_req, res) => {
