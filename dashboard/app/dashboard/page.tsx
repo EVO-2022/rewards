@@ -24,6 +24,14 @@ export default async function DashboardPage() {
 
   try {
     brand = await getFirstBrand();
+    
+    // Log in development
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[DashboardPage] getFirstBrand returned:", {
+        brand: brand ? { id: brand.id, name: brand.name, slug: brand.slug } : null,
+      });
+    }
+    
     if (!brand) {
       return (
         <div>
@@ -55,7 +63,23 @@ export default async function DashboardPage() {
       joinedAt: brand.joinedAt ? String(brand.joinedAt) : undefined,
     };
 
-    summary = await adminApiFetch<BrandSummary>(`/brands/${brand.id}/summary`);
+    try {
+      summary = await adminApiFetch<BrandSummary>(`/brands/${brand.id}/summary`);
+    } catch (summaryError: unknown) {
+      // Log error from getBrandSummary in development
+      if (process.env.NODE_ENV !== "production") {
+      const summaryErrorMsg =
+        summaryError &&
+        typeof summaryError === "object" &&
+        summaryError !== null &&
+        "message" in summaryError
+          ? String(summaryError.message)
+          : String(summaryError || "Unknown error");
+        console.error("[DashboardPage] Error fetching brand summary:", summaryErrorMsg);
+      }
+      // Re-throw to be caught by outer catch block
+      throw summaryError;
+    }
 
     // Sanitize summary to ensure all properties are serializable
     if (summary) {

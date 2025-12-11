@@ -47,16 +47,40 @@ export async function getFirstBrand(): Promise<Brand | null> {
     // Handle both formats for flexibility
     const response = await adminApiFetch<{ brands?: Brand[] } | Brand[]>("/brands/mine");
 
+    // Log the full response in development
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[getFirstBrand] Received brands response:", {
+        responseType: Array.isArray(response) ? "array" : "object",
+        responseKeys: Array.isArray(response)
+          ? `Array(${response.length})`
+          : Object.keys(response || {}),
+        fullResponse: JSON.stringify(response, null, 2),
+      });
+    }
+
     // Check if response is wrapped in { brands: ... }
     const brands = Array.isArray(response) ? response : response.brands || [];
 
     if (brands.length === 0) {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[getFirstBrand] No brands found, returning null");
+      }
       return null;
     }
 
     // Sanitize the brand to ensure it's fully serializable
     const firstBrand = brands[0];
-    return sanitizeBrand(firstBrand);
+    const sanitizedBrand = sanitizeBrand(firstBrand);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[getFirstBrand] Returning brand:", {
+        brandId: sanitizedBrand.id,
+        brandName: sanitizedBrand.name,
+        brandSlug: sanitizedBrand.slug,
+      });
+    }
+
+    return sanitizedBrand;
   } catch (error) {
     // Log error details safely without passing non-serializable objects
     // Use console.warn and only log in development (errors are handled gracefully in UI)

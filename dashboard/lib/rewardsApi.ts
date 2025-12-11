@@ -60,6 +60,7 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
   }
 
   const url = `${REWARDS_API_URL}${path}`;
+  const method = options.method || "GET";
 
   const res = await fetch(url, {
     ...options,
@@ -72,65 +73,67 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
   });
 
   if (!res.ok) {
-    let errorMessage = `Admin API error ${res.status}`;
-    let responseText = "";
+    // Read the response body as text
+    const errorText = await res.text().catch(() => "");
 
-    try {
-      // Try to read response as text first
-      responseText = await res.text();
-
-      // Try to parse as JSON
-      if (responseText) {
-        try {
-          const jsonData = JSON.parse(responseText);
-          if (jsonData && typeof jsonData === "object") {
-            errorMessage = String(jsonData.error || jsonData.message || errorMessage);
-          } else if (typeof jsonData === "string") {
-            errorMessage = jsonData;
-          }
-        } catch {
-          // Not JSON, use the text as error message if it's not too long
-          if (responseText.length < 200) {
-            errorMessage = responseText;
-          }
-        }
-      }
-    } catch (readError) {
-      // If we can't read the response, use status-based message
-      const readErrorMsg = readError instanceof Error ? readError.message : String(readError);
-      console.error("Failed to read error response:", readErrorMsg);
-    }
-
-    // Create a plain object literal with only serializable primitives
+    // Build detailed error message
     const statusCode = Number(res.status) || 500;
     const statusTextValue = String(res.statusText || "Unknown");
-    const messageValue = String(errorMessage || `Admin API error ${statusCode}`);
-    const pathValue = String(path || "");
+    const errorMessage =
+      `Admin API error [${statusCode} ${statusTextValue}]\n` +
+      `  Method: ${method}\n` +
+      `  URL: ${url}\n` +
+      `  Response: ${errorText || "(empty response)"}`;
 
-    // Log error details in development only (errors are handled gracefully in UI)
-    // Use console.warn instead of console.error since these are handled, not fatal
-    if (process.env.NODE_ENV === "development") {
-      console.warn(
-        `Admin API error [${statusCode}]: ${messageValue}\n` +
-          `  Path: ${pathValue}\n` +
-          `  URL: ${url}\n` +
-          `  Status: ${statusTextValue}`
-      );
+    // Log in development only
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[adminApiFetch] Error:", errorMessage);
+    }
+
+    // Try to parse error text as JSON for better error message
+    let parsedMessage = `Admin API error ${statusCode}`;
+    if (errorText) {
+      try {
+        const jsonData = JSON.parse(errorText);
+        if (jsonData && typeof jsonData === "object") {
+          parsedMessage = String(jsonData.error || jsonData.message || parsedMessage);
+        } else if (typeof jsonData === "string") {
+          parsedMessage = jsonData;
+        }
+      } catch {
+        // Not JSON, use the text as error message if it's not too long
+        if (errorText.length < 200) {
+          parsedMessage = errorText;
+        }
+      }
     }
 
     // Create error payload with explicit values
     const errorPayload: { status: number; statusText: string; message: string; path: string } = {
       status: statusCode,
       statusText: statusTextValue,
-      message: messageValue,
-      path: pathValue,
+      message: parsedMessage,
+      path: String(path || ""),
     };
 
     // Throw a plain object that's guaranteed to be serializable
     throw errorPayload;
   }
 
-  return res.json() as Promise<T>;
+  // Parse response once and store it
+  const data = (await res.json()) as T;
+
+  // Log success in development only
+  if (process.env.NODE_ENV !== "production") {
+    const preview = Array.isArray(data)
+      ? `Array(${data.length})`
+      : data && typeof data === "object"
+        ? `Object(${Object.keys(data).slice(0, 10).join(", ")})`
+        : String(data);
+    console.log("[adminApiFetch] OK", { method, url, preview });
+  }
+
+  return data;
 }
 
 /**

@@ -1,78 +1,63 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import clsx from "clsx";
+'use client';
 
-// Force dynamic rendering since we use auth() which requires headers()
-export const dynamic = "force-dynamic";
+import type { ReactNode } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 const navItems = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/members", label: "Members" },
-  { href: "/dashboard/redemptions", label: "Redemptions" },
-  { href: "/dashboard/api-keys", label: "API Keys" },
-  { href: "/dashboard/events", label: "Events" },
-  { href: "/dashboard/developers", label: "Developers" },
+  { href: '/dashboard', label: 'Overview' },
+  { href: '/dashboard/members', label: 'Members' },
+  { href: '/dashboard/events', label: 'Events' },
+  { href: '/dashboard/redemptions', label: 'Redemptions' },
+  { href: '/dashboard/developers', label: 'Developers' },
+  { href: '/dashboard/api-keys', label: 'API Keys' },
 ];
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  let userId: string | null = null;
-
-  try {
-    const authResult = await auth();
-    userId = authResult?.userId || null;
-  } catch (error: unknown) {
-    // Safely handle auth errors - convert to string to avoid serialization issues
-    // Never pass the error object itself, only convert to string for logging
-    let errorMsg = "Authentication error";
-    if (error) {
-      if (typeof error === "object" && error !== null) {
-        if ("message" in error && typeof error.message === "string") {
-          errorMsg = error.message;
-        } else if ("toString" in error && typeof error.toString === "function") {
-          errorMsg = error.toString();
-        }
-      } else {
-        errorMsg = String(error);
-      }
-    }
-    // Log auth errors in development only
-    if (process.env.NODE_ENV === "development") {
-      console.warn("Auth error in layout:", errorMsg);
-    }
-    // Redirect to sign-in on auth failure
-    redirect("/sign-in");
-  }
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
+function SidebarNav() {
+  const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold mb-6">Dashboard</h2>
-          <nav className="space-y-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={clsx(
-                  "block px-4 py-2 rounded-lg transition-colors",
-                  "hover:bg-gray-800"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </aside>
+    <aside className="w-60 border-r border-slate-800 bg-slate-950/80 backdrop-blur">
+      <div className="px-4 py-3 border-b border-slate-800">
+        <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
+          Rewards Admin
+        </span>
+      </div>
+      <nav className="flex flex-col gap-0.5 px-2 py-3 text-sm">
+        {navItems.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center rounded-md px-3 py-2 transition-colors ${
+                active
+                  ? 'bg-slate-800 text-slate-50'
+                  : 'text-slate-300 hover:bg-slate-900 hover:text-slate-50'
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
 
-      {/* Main content */}
-      <main className="flex-1 p-8">{children}</main>
+export default function DashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="flex min-h-screen">
+        <SidebarNav />
+        <main className="flex-1 px-6 py-6">
+          <div className="mx-auto max-w-6xl">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }
