@@ -9,22 +9,24 @@ const REWARDS_API_URL = process.env.NEXT_PUBLIC_REWARDS_API_URL || "http://local
  */
 export async function adminApiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!REWARDS_API_URL) {
-    throw {
+    const error: { status: number; statusText: string; message: string } = {
       status: 500,
       statusText: "Configuration Error",
       message: "REWARDS_API_URL is not configured",
     };
+    throw error;
   }
 
   const { getToken } = await auth();
   const token = await getToken();
 
   if (!token) {
-    throw {
+    const error: { status: number; statusText: string; message: string } = {
       status: 401,
       statusText: "Unauthorized",
       message: "No Clerk token available for admin API call",
     };
+    throw error;
   }
 
   const url = `${REWARDS_API_URL}${path}`;
@@ -40,24 +42,28 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
   });
 
   if (!res.ok) {
-    let details: any = null;
+    let errorMessage = `Admin API error ${res.status}`;
     try {
-      details = await res.json();
+      const jsonData = await res.json();
+      if (jsonData && typeof jsonData === "object") {
+        errorMessage = String(jsonData.error || jsonData.message || errorMessage);
+      } else if (typeof jsonData === "string") {
+        errorMessage = jsonData;
+      }
     } catch {
-      // ignore JSON parse errors
+      // ignore JSON parse errors, use default message
     }
 
-    const errorPayload = {
-      status: res.status,
-      statusText: res.statusText,
-      details,
-      message: details?.error || details?.message || `Admin API error ${res.status}`,
+    // Create a plain object literal (not Object.create(null)) with only serializable primitives
+    const errorPayload: { status: number; statusText: string; message: string } = {
+      status: Number(res.status),
+      statusText: String(res.statusText || ""),
+      message: errorMessage,
     };
 
     console.error("Admin API error", errorPayload);
 
-    // Return a typed error object instead of throwing a class instance.
-    // Callers must handle this explicitly.
+    // Throw a plain object that's guaranteed to be serializable
     throw errorPayload;
   }
 
