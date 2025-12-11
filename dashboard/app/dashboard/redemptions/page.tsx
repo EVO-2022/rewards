@@ -31,10 +31,7 @@ export default async function RedemptionsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Redemptions"
-        description={`Brand: ${selectedBrand.name}`}
-      />
+      <PageHeader title="Redemptions" description={`Brand: ${selectedBrand.name}`} />
 
       <Card>
         {redemptions.length === 0 ? (
@@ -73,8 +70,8 @@ export default async function RedemptionsPage() {
                           redemption.status === "completed"
                             ? "bg-green-100 text-green-800"
                             : redemption.status === "pending"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
                         }`}
                       >
                         {redemption.status}
@@ -93,4 +90,3 @@ export default async function RedemptionsPage() {
     </div>
   );
 }
-

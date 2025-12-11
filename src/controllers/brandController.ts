@@ -242,55 +242,102 @@ export const getBrandSummary = async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Access denied to this brand" });
     }
 
-    // Get total members count
-    const totalMembers = await prisma.brandMember.count({
-      where: { brandId },
-    });
+    // Use transaction for atomic queries
+    const [
+      memberCount,
+      mintAggregate,
+      burnAggregate,
+      totalRedemptions,
+      completedRedemptions,
+      pendingRedemptions,
+      failedRedemptions,
+      lastLedgerActivity,
+      lastRedemptionActivity,
+    ] = await prisma.$transaction([
+      // Member count
+      prisma.brandMember.count({
+        where: { brandId },
+      }),
+      // Total points issued (MINT)
+      prisma.rewardLedger.aggregate({
+        where: {
+          brandId,
+          type: "MINT",
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      // Total points burned (BURN)
+      prisma.rewardLedger.aggregate({
+        where: {
+          brandId,
+          type: "BURN",
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      // Total redemptions count
+      prisma.redemption.count({
+        where: { brandId },
+      }),
+      // Completed redemptions
+      prisma.redemption.count({
+        where: { brandId, status: "completed" },
+      }),
+      // Pending redemptions
+      prisma.redemption.count({
+        where: { brandId, status: "pending" },
+      }),
+      // Failed/cancelled redemptions
+      prisma.redemption.count({
+        where: {
+          brandId,
+          status: {
+            in: ["failed", "cancelled"],
+          },
+        },
+      }),
+      // Last ledger activity
+      prisma.rewardLedger.findFirst({
+        where: { brandId },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+      // Last redemption activity
+      prisma.redemption.findFirst({
+        where: { brandId },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+    ]);
 
-    // Calculate total points issued (sum of MINT entries)
-    const mintEntries = await prisma.rewardLedger.findMany({
-      where: {
-        brandId,
-        type: "MINT",
-      },
-      select: {
-        amount: true,
-      },
-    });
+    const totalPointsIssued = Number(mintAggregate._sum.amount || 0);
+    const totalPointsBurned = Number(burnAggregate._sum.amount || 0);
+    const currentLiability = totalPointsIssued - totalPointsBurned;
 
-    const totalPointsIssued = mintEntries.reduce(
-      (sum, entry) => sum + Number(entry.amount),
-      0
-    );
-
-    // Calculate total points redeemed (sum of Redemption.pointsUsed where status is completed)
-    const completedRedemptions = await prisma.redemption.findMany({
-      where: {
-        brandId,
-        status: "completed",
-      },
-      select: {
-        pointsUsed: true,
-      },
-    });
-
-    const totalPointsRedeemed = completedRedemptions.reduce(
-      (sum, redemption) => sum + Number(redemption.pointsUsed),
-      0
-    );
-
-    // Outstanding points = issued - redeemed
-    const outstandingPoints = totalPointsIssued - totalPointsRedeemed;
+    // Determine last activity
+    const lastActivityAt =
+      lastLedgerActivity?.createdAt && lastRedemptionActivity?.createdAt
+        ? lastLedgerActivity.createdAt > lastRedemptionActivity.createdAt
+          ? lastLedgerActivity.createdAt
+          : lastRedemptionActivity.createdAt
+        : lastLedgerActivity?.createdAt || lastRedemptionActivity?.createdAt || null;
 
     res.json({
       brandId: brand.id,
       name: brand.name,
       slug: brand.slug,
-      totalMembers,
+      memberCount,
       totalPointsIssued,
-      totalPointsRedeemed,
-      outstandingPoints,
-      createdAt: brand.createdAt.toISOString(),
+      totalPointsBurned,
+      currentLiability,
+      totalRedemptions,
+      completedRedemptions,
+      pendingRedemptions,
+      failedRedemptions,
+      lastActivityAt: lastActivityAt?.toISOString() || null,
     });
   } catch (error) {
     console.error("Get brand summary error:", error);

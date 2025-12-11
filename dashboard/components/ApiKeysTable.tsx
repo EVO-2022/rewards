@@ -54,9 +54,7 @@ export function ApiKeysTable({ brandId, initialKeys }: ApiKeysTableProps) {
         <Card className="bg-yellow-50 border-yellow-200">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-lg font-semibold text-yellow-900 mb-2">
-                API Key Created
-              </h3>
+              <h3 className="text-lg font-semibold text-yellow-900 mb-2">API Key Created</h3>
               <p className="text-sm text-yellow-800 mb-4">
                 Copy this key now. You won't be able to see it again.
               </p>
@@ -101,9 +99,7 @@ export function ApiKeysTable({ brandId, initialKeys }: ApiKeysTableProps) {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            {error && (
-              <div className="mb-4 text-sm text-red-600">{error}</div>
-            )}
+            {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
             <button
               type="submit"
               disabled={isCreating}
@@ -144,9 +140,7 @@ export function ApiKeysTable({ brandId, initialKeys }: ApiKeysTableProps) {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          key.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                          key.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                         }`}
                       >
                         {key.isActive ? "Active" : "Inactive"}
@@ -156,9 +150,7 @@ export function ApiKeysTable({ brandId, initialKeys }: ApiKeysTableProps) {
                       {new Date(key.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {key.lastUsedAt
-                        ? new Date(key.lastUsedAt).toLocaleString()
-                        : "Never"}
+                      {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "Never"}
                     </td>
                   </tr>
                 ))}
@@ -170,4 +162,3 @@ export function ApiKeysTable({ brandId, initialKeys }: ApiKeysTableProps) {
     </div>
   );
 }
-

@@ -31,13 +31,9 @@ export default async function ApiKeysPage() {
 
   return (
     <div>
-      <PageHeader
-        title="API Keys"
-        description={`Brand: ${selectedBrand.name}`}
-      />
+      <PageHeader title="API Keys" description={`Brand: ${selectedBrand.name}`} />
 
       <ApiKeysTable brandId={selectedBrand.id} initialKeys={apiKeys} />
     </div>
   );
 }
-

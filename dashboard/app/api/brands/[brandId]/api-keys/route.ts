@@ -4,7 +4,7 @@ import { REWARDS_API_URL } from "@/lib/config";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { brandId: string } }
+  { params }: { params: Promise<{ brandId: string }> }
 ) {
   try {
     const { userId, getToken } = await auth();
@@ -16,14 +16,11 @@ export async function POST(
     const token = await getToken();
 
     if (!token) {
-      return NextResponse.json(
-        { error: "No authentication token" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "No authentication token" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { brandId } = params;
+    const { brandId } = await params;
 
     const response = await fetch(`${REWARDS_API_URL}/brands/${brandId}/api-keys`, {
       method: "POST",
@@ -46,10 +43,6 @@ export async function POST(
     return NextResponse.json(data);
   } catch (error) {
     console.error("API route error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

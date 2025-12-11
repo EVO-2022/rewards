@@ -10,11 +10,7 @@ const navItems = [
   { href: "/dashboard/api-keys", label: "API Keys" },
 ];
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
 
   if (!userId) {
@@ -49,4 +45,3 @@ export default async function DashboardLayout({
     </div>
   );
 }
-

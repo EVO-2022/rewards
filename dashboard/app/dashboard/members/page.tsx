@@ -7,7 +7,9 @@ import { getFirstBrand } from "@/lib/brandHelper";
 
 async function getBrandMembers(brandId: string): Promise<BrandMembersResponse | null> {
   try {
-    return await adminApiFetch<BrandMembersResponse>(`/brands/${brandId}/members?page=1&pageSize=100`);
+    return await adminApiFetch<BrandMembersResponse>(
+      `/brands/${brandId}/members?page=1&pageSize=100`
+    );
   } catch (error) {
     console.error("Failed to fetch members:", error);
     return null;
@@ -32,17 +34,12 @@ export default async function MembersPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Members"
-        description={`Brand: ${selectedBrand.name}`}
-      />
+      <PageHeader title="Members" description={`Brand: ${selectedBrand.name}`} />
 
       {membersData ? (
         <Card>
           <div className="mb-4">
-            <p className="text-sm text-gray-600">
-              Total members: {membersData.total}
-            </p>
+            <p className="text-sm text-gray-600">Total members: {membersData.total}</p>
           </div>
           <MembersTable members={membersData.members} />
         </Card>
@@ -54,4 +51,3 @@ export default async function MembersPage() {
     </div>
   );
 }
-

@@ -14,8 +14,7 @@ export function MembersTable({ members }: MembersTableProps) {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
-      member.email?.toLowerCase().includes(search) ||
-      member.userId.toLowerCase().includes(search)
+      member.email?.toLowerCase().includes(search) || member.userId.toLowerCase().includes(search)
     );
   });
 
@@ -78,4 +77,3 @@ export function MembersTable({ members }: MembersTableProps) {
     </div>
   );
 }
-

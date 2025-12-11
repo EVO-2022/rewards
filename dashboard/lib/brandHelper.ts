@@ -14,4 +14,3 @@ export async function getFirstBrand(): Promise<Brand | null> {
     return null;
   }
 }
-

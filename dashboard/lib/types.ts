@@ -18,11 +18,15 @@ export interface BrandSummary {
   brandId: string;
   name: string;
   slug: string;
-  totalMembers: number;
+  memberCount: number;
   totalPointsIssued: number;
-  totalPointsRedeemed: number;
-  outstandingPoints: number;
-  createdAt: string;
+  totalPointsBurned: number;
+  currentLiability: number;
+  totalRedemptions: number;
+  completedRedemptions: number;
+  pendingRedemptions: number;
+  failedRedemptions: number;
+  lastActivityAt: string | null;
 }
 
 export interface BrandMember {
@@ -89,4 +93,3 @@ export interface RewardLedger {
   metadata?: Record<string, any>;
   createdAt: string;
 }
-
