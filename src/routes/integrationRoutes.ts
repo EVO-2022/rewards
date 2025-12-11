@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "../utils/prisma";
 import { rewardsEngine } from "../services/rewardsEngine";
 import { fraudDetection } from "../services/fraudDetection";
+import { triggerWebhooksForEvent } from "../services/webhookService";
 import { LedgerType } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -42,7 +43,7 @@ async function findIntegrationUser(
   externalUserId: string
 ): Promise<{ id: string } | null> {
   const integrationClerkId = `integration_${brandId}_${externalUserId}`;
-  
+
   return await prisma.user.findUnique({
     where: { clerkId: integrationClerkId },
   });
@@ -108,6 +109,24 @@ router.post("/points/issue", validate(issuePointsSchema), async (req, res) => {
     // Get updated balance
     const newBalance = await rewardsEngine.getUserBalance(brandId, user.id);
 
+    // Trigger webhooks for points issued event
+    await triggerWebhooksForEvent({
+      type: "points.issued",
+      brandId,
+      userId: user.id,
+      externalUserId: data.externalUserId,
+      points: data.points,
+      ledgerEntryId: ledger.id,
+      redemptionId: undefined,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        reason: data.reason || "integration_issue",
+        apiKeyId: apiKeyId,
+        integration: true,
+        ...(data.metadata || {}),
+      },
+    });
+
     res.status(201).json({
       status: "ok",
       brandId,
@@ -137,10 +156,10 @@ const balanceQuerySchema = z.object({
 router.get("/points/balance", async (req, res) => {
   try {
     const { brandId } = req.integrationAuth!;
-    
+
     // Validate query parameters
     const queryParams = balanceQuerySchema.safeParse(req.query);
-    
+
     if (!queryParams.success) {
       return res.status(400).json({
         error: "Validation error",
@@ -254,6 +273,24 @@ router.post("/points/redeem", validate(redeemPointsSchema), async (req, res) => 
     // Calculate new balance (currentBalance - points)
     const newBalance = currentBalance - data.points;
 
+    // Trigger webhooks for points redeemed event
+    await triggerWebhooksForEvent({
+      type: "points.redeemed",
+      brandId,
+      userId: user.id,
+      externalUserId: data.externalUserId,
+      points: data.points,
+      ledgerEntryId: result.ledger.id,
+      redemptionId: result.redemption.id,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        reason: data.reason || "integration_redeem",
+        apiKeyId: apiKeyId,
+        integration: true,
+        ...(data.metadata || {}),
+      },
+    });
+
     res.status(200).json({
       status: "ok",
       brandId,
@@ -363,7 +400,9 @@ router.get("/points/history", async (req, res) => {
     const hasMore = items.length > limit;
     const resultItems = hasMore ? items.slice(0, limit) : items;
     const nextCursor =
-      hasMore && resultItems.length > 0 ? resultItems[resultItems.length - 1].createdAt.toISOString() : null;
+      hasMore && resultItems.length > 0
+        ? resultItems[resultItems.length - 1].createdAt.toISOString()
+        : null;
 
     // Format response
     const formattedItems = resultItems.map((item) => ({
@@ -475,7 +514,9 @@ router.get("/redemptions/history", async (req, res) => {
     const hasMore = items.length > limit;
     const resultItems = hasMore ? items.slice(0, limit) : items;
     const nextCursor =
-      hasMore && resultItems.length > 0 ? resultItems[resultItems.length - 1].createdAt.toISOString() : null;
+      hasMore && resultItems.length > 0
+        ? resultItems[resultItems.length - 1].createdAt.toISOString()
+        : null;
 
     // Format response
     const formattedItems = resultItems.map((item) => ({
@@ -502,6 +543,52 @@ router.get("/redemptions/history", async (req, res) => {
       status: "error",
       code: "INTERNAL_ERROR",
       message: "Something went wrong",
+    });
+  }
+});
+
+// Events receiver endpoint
+const eventsSchema = z.object({
+  eventName: z.string().min(1, "eventName is required and must be non-empty"),
+  externalUserId: z.string().min(1, "externalUserId is required and must be non-empty"),
+  metadata: z.record(z.any()).optional(),
+});
+
+router.post("/events", validate(eventsSchema), async (req, res) => {
+  try {
+    const { brandId, apiKeyId } = req.integrationAuth!;
+    const data = eventsSchema.parse(req.body);
+
+    // Log the event
+    console.log("[integration] event received", {
+      brandId,
+      apiKeyId,
+      eventName: data.eventName,
+      externalUserId: data.externalUserId,
+      metadata: data.metadata,
+    });
+
+    // Return success response
+    res.status(200).json({
+      status: "ok",
+      brandId,
+      externalUserId: data.externalUserId,
+      eventName: data.eventName,
+    });
+  } catch (error) {
+    console.error("Integration events error:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        status: "error",
+        code: "INVALID_REQUEST",
+        message: "Validation error",
+        details: error.errors,
+      });
+    }
+    res.status(500).json({
+      status: "error",
+      code: "INTERNAL_ERROR",
+      message: "Failed to process event",
     });
   }
 });
@@ -541,4 +628,3 @@ router.get("/users/:externalUserId/balance", async (req, res) => {
 });
 
 export default router;
-
