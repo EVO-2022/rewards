@@ -111,15 +111,13 @@ router.post("/points/issue", validate(issuePointsSchema), async (req, res) => {
 
     // Trigger webhooks for points issued event
     await triggerWebhooksForEvent({
-      type: "points.issued",
       brandId,
-      userId: user.id,
+      eventName: "points.issued",
       externalUserId: data.externalUserId,
-      points: data.points,
-      ledgerEntryId: ledger.id,
-      redemptionId: undefined,
-      createdAt: new Date().toISOString(),
       metadata: {
+        userId: user.id,
+        points: data.points,
+        ledgerEntryId: ledger.id,
         reason: data.reason || "integration_issue",
         apiKeyId: apiKeyId,
         integration: true,
@@ -275,15 +273,14 @@ router.post("/points/redeem", validate(redeemPointsSchema), async (req, res) => 
 
     // Trigger webhooks for points redeemed event
     await triggerWebhooksForEvent({
-      type: "points.redeemed",
       brandId,
-      userId: user.id,
+      eventName: "points.redeemed",
       externalUserId: data.externalUserId,
-      points: data.points,
-      ledgerEntryId: result.ledger.id,
-      redemptionId: result.redemption.id,
-      createdAt: new Date().toISOString(),
       metadata: {
+        userId: user.id,
+        points: data.points,
+        ledgerEntryId: result.ledger.id,
+        redemptionId: result.redemption.id,
         reason: data.reason || "integration_redeem",
         apiKeyId: apiKeyId,
         integration: true,
