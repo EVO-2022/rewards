@@ -282,6 +282,230 @@ router.post("/points/redeem", validate(redeemPointsSchema), async (req, res) => 
   }
 });
 
+// Points history endpoint
+const pointsHistoryQuerySchema = z.object({
+  externalUserId: z.string().min(1, "externalUserId is required and must be non-empty"),
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 20))
+    .pipe(z.number().int().min(1).max(100)),
+  cursor: z.string().datetime().optional(), // ISO datetime string for cursor
+  type: z.nativeEnum(LedgerType).optional(),
+  since: z.string().datetime().optional(),
+});
+
+router.get("/points/history", async (req, res) => {
+  try {
+    const { brandId } = req.integrationAuth!;
+
+    // Validate query parameters
+    const queryParams = pointsHistoryQuerySchema.safeParse(req.query);
+
+    if (!queryParams.success) {
+      return res.status(400).json({
+        status: "error",
+        code: "INVALID_REQUEST",
+        message: "Validation error",
+        details: queryParams.error.errors,
+      });
+    }
+
+    const { externalUserId, limit, cursor, type, since } = queryParams.data;
+
+    // Find user by externalUserId (don't create if doesn't exist)
+    const user = await findIntegrationUser(brandId, externalUserId);
+
+    // If user doesn't exist, return empty array (not an error)
+    if (!user) {
+      return res.json({
+        status: "ok",
+        brandId,
+        externalUserId,
+        items: [],
+        hasMore: false,
+        nextCursor: null,
+      });
+    }
+
+    // Build where clause
+    const where: any = {
+      brandId,
+      userId: user.id,
+    };
+
+    if (type) {
+      where.type = type;
+    }
+
+    // Handle createdAt filters (since and cursor)
+    if (since || cursor) {
+      where.createdAt = {};
+      if (since) {
+        where.createdAt.gte = new Date(since);
+      }
+      if (cursor) {
+        // Cursor-based pagination: get records before the cursor timestamp (for DESC order)
+        where.createdAt.lt = new Date(cursor);
+      }
+    }
+
+    // Query limit + 1 to check if there are more items
+    const items = await prisma.rewardLedger.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit + 1,
+    });
+
+    // Check if there are more items
+    const hasMore = items.length > limit;
+    const resultItems = hasMore ? items.slice(0, limit) : items;
+    const nextCursor =
+      hasMore && resultItems.length > 0 ? resultItems[resultItems.length - 1].createdAt.toISOString() : null;
+
+    // Format response
+    const formattedItems = resultItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      amount: Number(item.amount),
+      reason: item.reason || null,
+      metadata: item.metadata || {},
+      createdAt: item.createdAt.toISOString(),
+    }));
+
+    res.json({
+      status: "ok",
+      brandId,
+      userId: user.id,
+      externalUserId,
+      items: formattedItems,
+      hasMore,
+      nextCursor,
+    });
+  } catch (error) {
+    console.error("Integration points history error:", error);
+    res.status(500).json({
+      status: "error",
+      code: "INTERNAL_ERROR",
+      message: "Something went wrong",
+    });
+  }
+});
+
+// Redemptions history endpoint
+const redemptionsHistoryQuerySchema = z.object({
+  externalUserId: z.string().min(1, "externalUserId is required and must be non-empty"),
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 20))
+    .pipe(z.number().int().min(1).max(100)),
+  cursor: z.string().datetime().optional(), // ISO datetime string for cursor
+  status: z.string().optional(),
+  since: z.string().datetime().optional(),
+});
+
+router.get("/redemptions/history", async (req, res) => {
+  try {
+    const { brandId } = req.integrationAuth!;
+
+    // Validate query parameters
+    const queryParams = redemptionsHistoryQuerySchema.safeParse(req.query);
+
+    if (!queryParams.success) {
+      return res.status(400).json({
+        status: "error",
+        code: "INVALID_REQUEST",
+        message: "Validation error",
+        details: queryParams.error.errors,
+      });
+    }
+
+    const { externalUserId, limit, cursor, status, since } = queryParams.data;
+
+    // Find user by externalUserId (don't create if doesn't exist)
+    const user = await findIntegrationUser(brandId, externalUserId);
+
+    // If user doesn't exist, return empty array (not an error)
+    if (!user) {
+      return res.json({
+        status: "ok",
+        brandId,
+        externalUserId,
+        items: [],
+        hasMore: false,
+        nextCursor: null,
+      });
+    }
+
+    // Build where clause
+    const where: any = {
+      brandId,
+      userId: user.id,
+    };
+
+    if (status) {
+      where.status = status;
+    }
+
+    // Handle createdAt filters (since and cursor)
+    if (since || cursor) {
+      where.createdAt = {};
+      if (since) {
+        where.createdAt.gte = new Date(since);
+      }
+      if (cursor) {
+        // Cursor-based pagination: get records before the cursor timestamp (for DESC order)
+        where.createdAt.lt = new Date(cursor);
+      }
+    }
+
+    // Query limit + 1 to check if there are more items
+    const items = await prisma.redemption.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit + 1,
+    });
+
+    // Check if there are more items
+    const hasMore = items.length > limit;
+    const resultItems = hasMore ? items.slice(0, limit) : items;
+    const nextCursor =
+      hasMore && resultItems.length > 0 ? resultItems[resultItems.length - 1].createdAt.toISOString() : null;
+
+    // Format response
+    const formattedItems = resultItems.map((item) => ({
+      id: item.id,
+      points: Number(item.pointsUsed),
+      reason: (item.metadata as any)?.reason || null,
+      metadata: item.metadata || {},
+      status: item.status,
+      createdAt: item.createdAt.toISOString(),
+    }));
+
+    res.json({
+      status: "ok",
+      brandId,
+      userId: user.id,
+      externalUserId,
+      items: formattedItems,
+      hasMore,
+      nextCursor,
+    });
+  } catch (error) {
+    console.error("Integration redemptions history error:", error);
+    res.status(500).json({
+      status: "error",
+      code: "INTERNAL_ERROR",
+      message: "Something went wrong",
+    });
+  }
+});
+
 // Legacy endpoint (path parameter) - kept for backward compatibility
 router.get("/users/:externalUserId/balance", async (req, res) => {
   try {

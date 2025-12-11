@@ -322,6 +322,218 @@ curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/poin
 
 ---
 
+### GET /points/history
+
+Get the points ledger history for a user identified by an external user ID. Returns all point transactions (earned, redeemed, adjusted) in chronological order.
+
+**Headers:**
+- `Authorization: Bearer <api-key>` or `X-API-Key: <api-key>`
+
+**Query Parameters:**
+- `externalUserId` (string, required) - Your brand's identifier for this user. Must be non-empty.
+- `limit` (number, optional) - Number of items to return. Default: 20, Max: 100.
+- `cursor` (string, optional) - ISO datetime string for cursor-based pagination. Use `nextCursor` from previous response.
+- `type` (string, optional) - Filter by ledger type: `MINT` (earned), `BURN` (redeemed), or other enum values.
+- `since` (string, optional) - ISO datetime string. Only return records with `createdAt >= since`.
+
+**Response (200 OK):**
+
+If user exists:
+```json
+{
+  "status": "ok",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "userId": "46d521bb-1d84-4baf-a743-f536e1f5b31d",
+  "externalUserId": "user-123",
+  "items": [
+    {
+      "id": "ledger-uuid",
+      "type": "MINT",
+      "amount": 50,
+      "reason": "test_purchase",
+      "metadata": {
+        "orderId": "ORD-123",
+        "source": "smoke-test"
+      },
+      "createdAt": "2025-12-10T23:52:57.047Z"
+    },
+    {
+      "id": "ledger-uuid-2",
+      "type": "BURN",
+      "amount": 20,
+      "reason": "integration_redeem",
+      "metadata": {
+        "redemptionId": "redemption-uuid"
+      },
+      "createdAt": "2025-12-10T23:50:12.000Z"
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null
+}
+```
+
+If user has never earned points (doesn't exist in system):
+```json
+{
+  "status": "ok",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "externalUserId": "user-123",
+  "items": [],
+  "hasMore": false,
+  "nextCursor": null
+}
+```
+
+**Note:** Items are sorted by `createdAt` descending (most recent first). A `nextCursor` is provided when `hasMore` is `true` for pagination.
+
+**Error Responses:**
+- `400` - Validation error (missing externalUserId, invalid limit/type/since/cursor)
+  ```json
+  {
+    "status": "error",
+    "code": "INVALID_REQUEST",
+    "message": "Validation error",
+    "details": [...]
+  }
+  ```
+- `401` - Missing or invalid API key
+- `403` - Brand is inactive or suspended
+- `500` - Internal server error
+  ```json
+  {
+    "status": "error",
+    "code": "INTERNAL_ERROR",
+    "message": "Something went wrong"
+  }
+  ```
+
+**Example Request:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/points/history?externalUserId=user-123&limit=20" \
+  -H "Authorization: Bearer rk_..."
+```
+
+**Example with filters:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/points/history?externalUserId=user-123&type=MINT&since=2025-12-01T00:00:00Z&limit=50" \
+  -H "Authorization: Bearer rk_..."
+```
+
+**Pagination Example:**
+```bash
+# First page
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/points/history?externalUserId=user-123&limit=20" \
+  -H "Authorization: Bearer rk_..."
+
+# Next page (using cursor from previous response)
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/points/history?externalUserId=user-123&limit=20&cursor=2025-12-10T23:50:12.000Z" \
+  -H "Authorization: Bearer rk_..."
+```
+
+---
+
+### GET /redemptions/history
+
+Get the redemption history for a user identified by an external user ID. Returns all redemption records in chronological order.
+
+**Headers:**
+- `Authorization: Bearer <api-key>` or `X-API-Key: <api-key>`
+
+**Query Parameters:**
+- `externalUserId` (string, required) - Your brand's identifier for this user. Must be non-empty.
+- `limit` (number, optional) - Number of items to return. Default: 20, Max: 100.
+- `cursor` (string, optional) - ISO datetime string for cursor-based pagination. Use `nextCursor` from previous response.
+- `status` (string, optional) - Filter by redemption status: `pending`, `completed`, `cancelled`.
+- `since` (string, optional) - ISO datetime string. Only return records with `createdAt >= since`.
+
+**Response (200 OK):**
+
+If user exists:
+```json
+{
+  "status": "ok",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "userId": "46d521bb-1d84-4baf-a743-f536e1f5b31d",
+  "externalUserId": "user-123",
+  "items": [
+    {
+      "id": "redemption-uuid",
+      "points": 20,
+      "reason": "test_redemption",
+      "metadata": {
+        "orderId": "ORD-456",
+        "source": "integration-test"
+      },
+      "status": "completed",
+      "createdAt": "2025-12-10T23:59:12.000Z"
+    }
+  ],
+  "hasMore": false,
+  "nextCursor": null
+}
+```
+
+If user has never made a redemption (doesn't exist in system):
+```json
+{
+  "status": "ok",
+  "brandId": "9729d730-6fbb-4dd8-abc9-cdf1dcf21e5f",
+  "externalUserId": "user-123",
+  "items": [],
+  "hasMore": false,
+  "nextCursor": null
+}
+```
+
+**Note:** Items are sorted by `createdAt` descending (most recent first). A `nextCursor` is provided when `hasMore` is `true` for pagination.
+
+**Error Responses:**
+- `400` - Validation error (missing externalUserId, invalid limit/status/since/cursor)
+  ```json
+  {
+    "status": "error",
+    "code": "INVALID_REQUEST",
+    "message": "Validation error",
+    "details": [...]
+  }
+  ```
+- `401` - Missing or invalid API key
+- `403` - Brand is inactive or suspended
+- `500` - Internal server error
+  ```json
+  {
+    "status": "error",
+    "code": "INTERNAL_ERROR",
+    "message": "Something went wrong"
+  }
+  ```
+
+**Example Request:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/redemptions/history?externalUserId=user-123&limit=20" \
+  -H "Authorization: Bearer rk_..."
+```
+
+**Example with filters:**
+```bash
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/redemptions/history?externalUserId=user-123&status=completed&since=2025-12-01T00:00:00Z&limit=50" \
+  -H "Authorization: Bearer rk_..."
+```
+
+**Pagination Example:**
+```bash
+# First page
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/redemptions/history?externalUserId=user-123&limit=20" \
+  -H "Authorization: Bearer rk_..."
+
+# Next page (using cursor from previous response)
+curl -X GET "https://rewards-production-a600.up.railway.app/api/integration/redemptions/history?externalUserId=user-123&limit=20&cursor=2025-12-10T23:59:12.000Z" \
+  -H "Authorization: Bearer rk_..."
+```
+
+---
+
 ### GET /users/:externalUserId/balance (Legacy)
 
 **Note:** This endpoint uses path parameters instead of query parameters. The `/points/balance` endpoint above is the recommended approach.
