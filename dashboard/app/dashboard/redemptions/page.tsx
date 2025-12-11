@@ -14,7 +14,8 @@ async function getRedemptions(brandId: string): Promise<Redemption[]> {
 }
 
 export default async function RedemptionsPage() {
-  const selectedBrand = await getFirstBrand();
+  const brandId = process.env.NEXT_PUBLIC_BRAND_ID;
+  const selectedBrand = brandId ? { id: brandId } : await getFirstBrand();
 
   if (!selectedBrand) {
     return (
@@ -31,7 +32,7 @@ export default async function RedemptionsPage() {
 
   return (
     <div>
-      <PageHeader title="Redemptions" description={`Brand: ${selectedBrand.name}`} />
+      <PageHeader title="Redemptions" description={redemptions.length > 0 ? `Brand: ${redemptions[0].brandId}` : "Redemptions"} />
 
       <Card>
         {redemptions.length === 0 ? (

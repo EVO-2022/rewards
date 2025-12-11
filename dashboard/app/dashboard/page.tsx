@@ -1,7 +1,6 @@
 import { BrandSummary } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
-import { getFirstBrand } from "@/lib/brandHelper";
 
 async function getBrandSummary(brandId: string): Promise<BrandSummary | null> {
   try {
@@ -26,26 +25,26 @@ function formatDate(dateString: string | null): string {
 }
 
 export default async function DashboardPage() {
-  const selectedBrand = await getFirstBrand();
+  const brandId = process.env.NEXT_PUBLIC_BRAND_ID!;
 
-  if (!selectedBrand) {
+  if (!brandId) {
     return (
       <div>
         <PageHeader title="Dashboard" />
         <Card>
           <p className="text-gray-600">
-            No brands found. You'll see stats here once you've been added to a brand.
+            NEXT_PUBLIC_BRAND_ID is not configured. Please set it in your environment variables.
           </p>
         </Card>
       </div>
     );
   }
 
-  const summary = await getBrandSummary(selectedBrand.id);
+  const summary = await getBrandSummary(brandId);
 
   return (
     <div>
-      <PageHeader title={selectedBrand.name} description={`${selectedBrand.slug} • Overview`} />
+      <PageHeader title={summary?.name || "Dashboard"} description={`${summary?.slug || ""} • Overview`} />
 
       {summary ? (
         <>

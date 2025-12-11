@@ -14,7 +14,8 @@ async function getApiKeys(brandId: string): Promise<BrandApiKey[]> {
 }
 
 export default async function ApiKeysPage() {
-  const selectedBrand = await getFirstBrand();
+  const brandId = process.env.NEXT_PUBLIC_BRAND_ID;
+  const selectedBrand = brandId ? { id: brandId } : await getFirstBrand();
 
   if (!selectedBrand) {
     return (
@@ -31,7 +32,7 @@ export default async function ApiKeysPage() {
 
   return (
     <div>
-      <PageHeader title="API Keys" description={`Brand: ${selectedBrand.name}`} />
+      <PageHeader title="API Keys" description={apiKeys.length > 0 ? `Brand: ${apiKeys[0].brandId}` : "API Keys"} />
 
       <ApiKeysTable brandId={selectedBrand.id} initialKeys={apiKeys} />
     </div>

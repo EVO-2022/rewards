@@ -17,7 +17,8 @@ async function getBrandMembers(brandId: string): Promise<BrandMembersResponse | 
 }
 
 export default async function MembersPage() {
-  const selectedBrand = await getFirstBrand();
+  const brandId = process.env.NEXT_PUBLIC_BRAND_ID;
+  const selectedBrand = brandId ? { id: brandId } : await getFirstBrand();
 
   if (!selectedBrand) {
     return (
@@ -34,7 +35,7 @@ export default async function MembersPage() {
 
   return (
     <div>
-      <PageHeader title="Members" description={`Brand: ${selectedBrand.name}`} />
+      <PageHeader title="Members" description={membersData ? `Brand: ${membersData.brandId}` : "Members"} />
 
       {membersData ? (
         <Card>
