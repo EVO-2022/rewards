@@ -18,10 +18,30 @@ function sanitizeBrand(brand: any): Brand {
 }
 
 /**
- * Get the first brand for the current user
+ * Get the current brand for the user
+ * - First checks NEXT_PUBLIC_BRAND_ID env var if set
+ * - Otherwise falls back to fetching the first brand from /brands/mine
  * Used as the "active" brand for MVP
  */
 export async function getFirstBrand(): Promise<Brand | null> {
+  // Check for NEXT_PUBLIC_BRAND_ID fallback first
+  const fallbackId = process.env.NEXT_PUBLIC_BRAND_ID;
+  if (fallbackId) {
+    try {
+      // Try to fetch the brand details using the fallback ID
+      const brand = await adminApiFetch<Brand>(`/brands/${fallbackId}`);
+      return sanitizeBrand(brand);
+    } catch (error) {
+      // If fallback ID fails, continue to normal flow
+      const errorMsg =
+        error && typeof error === "object" && "message" in error
+          ? String(error.message)
+          : String(error || "Unknown error");
+      console.warn("Failed to fetch brand with NEXT_PUBLIC_BRAND_ID:", errorMsg);
+      // Continue to normal flow below
+    }
+  }
+
   try {
     // API returns either { brands: Brand[] } or Brand[] directly
     // Handle both formats for flexibility
