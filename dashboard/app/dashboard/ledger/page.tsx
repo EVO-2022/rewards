@@ -136,6 +136,18 @@ export default async function LedgerPage({
     );
   }
 
+  const items = (ledgerData as any)?.items ?? [];
+  const total = (ledgerData as any)?.total ?? items.length;
+
+  if (!items.length) {
+    return (
+      <div className="p-6">
+        <h1 className="text-xl font-semibold">Ledger</h1>
+        <p className="mt-2 text-sm text-gray-600">No ledger activity yet.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader title="Ledger" description={`Points history for ${brand.name}`} />
