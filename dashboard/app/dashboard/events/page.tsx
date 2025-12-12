@@ -1,4 +1,4 @@
-import { getBrandEvents } from "@/lib/rewardsApi";
+import { getBrandEvents } from "@/lib/server/rewardsApi";
 import { AdminEventListResponse, AdminEventLogItem } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";

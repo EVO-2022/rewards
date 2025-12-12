@@ -1,4 +1,4 @@
-import { adminApiFetch } from "@/lib/rewardsApi";
+import { adminApiFetch } from "@/lib/server/rewardsApi";
 import { BrandMembersResponse } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";

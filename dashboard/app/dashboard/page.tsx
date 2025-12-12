@@ -3,9 +3,8 @@ import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { CreateBrandForm } from "@/components/CreateBrandForm";
 import { getFirstBrand } from "@/lib/brandHelper";
-import { adminApiFetch } from "@/lib/rewardsApi";
+import { adminApiFetch } from "@/lib/server/rewardsApi";
 
-// Force dynamic rendering since we use auth() which requires headers()
 export const dynamic = "force-dynamic";
 
 function formatDate(dateString: string | null): string {
@@ -27,14 +26,13 @@ export default async function DashboardPage() {
 
   try {
     brand = await getFirstBrand();
-    
-    // Log in development
+
     if (process.env.NODE_ENV !== "production") {
       console.log("[DashboardPage] getFirstBrand returned:", {
         brand: brand ? { id: brand.id, name: brand.name, slug: brand.slug } : null,
       });
     }
-    
+
     if (!brand) {
       return (
         <div>
@@ -42,7 +40,7 @@ export default async function DashboardPage() {
           <div className="max-w-2xl">
             <div className="mb-6">
               <p className="text-lg font-medium text-gray-900 mb-2">
-                You don't have any brands yet.
+                You don&apos;t have any brands yet.
               </p>
               <p className="text-gray-600">
                 Create your first brand to get started with managing rewards, members, and API keys.
@@ -54,72 +52,48 @@ export default async function DashboardPage() {
       );
     }
 
-    // Ensure brand is fully serializable before using
-    brand = {
+    // Normalize brand (avoid Dates / weird prototypes)
+    const safeBrand: Brand = {
+      ...brand,
       id: String(brand.id),
       name: String(brand.name),
       slug: String(brand.slug),
       description: brand.description ? String(brand.description) : undefined,
       isActive: Boolean(brand.isActive),
       createdAt: String(brand.createdAt),
-      role: brand.role ? (brand.role as "OWNER" | "MANAGER" | "VIEWER") : undefined,
+      role: brand.role as any,
       joinedAt: brand.joinedAt ? String(brand.joinedAt) : undefined,
     };
 
-    try {
-      summary = await adminApiFetch<BrandSummary>(`/brands/${brand.id}/summary`);
-    } catch (summaryError: unknown) {
-      // Log error from getBrandSummary in development
-      if (process.env.NODE_ENV !== "production") {
-      const summaryErrorMsg =
-        summaryError &&
-        typeof summaryError === "object" &&
-        summaryError !== null &&
-        "message" in summaryError
-          ? String(summaryError.message)
-          : String(summaryError || "Unknown error");
-        console.error("[DashboardPage] Error fetching brand summary:", summaryErrorMsg);
-      }
-      // Re-throw to be caught by outer catch block
-      throw summaryError;
-    }
+    brand = safeBrand;
 
-    // Sanitize summary to ensure all properties are serializable
+    summary = await adminApiFetch<BrandSummary>(`/brands/${brand.id}/summary`);
+
     if (summary) {
       summary = {
-        brandId: String(summary.brandId || ""),
-        name: String(summary.name || ""),
-        slug: String(summary.slug || ""),
-        memberCount: Number(summary.memberCount || 0),
-        totalPointsIssued: Number(summary.totalPointsIssued || 0),
-        totalPointsBurned: Number(summary.totalPointsBurned || 0),
-        currentLiability: Number(summary.currentLiability || 0),
-        totalRedemptions: Number(summary.totalRedemptions || 0),
-        completedRedemptions: Number(summary.completedRedemptions || 0),
-        pendingRedemptions: Number(summary.pendingRedemptions || 0),
-        failedRedemptions: Number(summary.failedRedemptions || 0),
-        lastActivityAt: summary.lastActivityAt ? String(summary.lastActivityAt) : null,
+        brandId: String((summary as any).brandId ?? ""),
+        name: String((summary as any).name ?? ""),
+        slug: String((summary as any).slug ?? ""),
+        memberCount: Number((summary as any).memberCount ?? 0),
+        totalPointsIssued: Number((summary as any).totalPointsIssued ?? 0),
+        totalPointsBurned: Number((summary as any).totalPointsBurned ?? 0),
+        currentLiability: Number((summary as any).currentLiability ?? 0),
+        totalRedemptions: Number((summary as any).totalRedemptions ?? 0),
+        completedRedemptions: Number((summary as any).completedRedemptions ?? 0),
+        pendingRedemptions: Number((summary as any).pendingRedemptions ?? 0),
+        failedRedemptions: Number((summary as any).failedRedemptions ?? 0),
+        lastActivityAt: (summary as any).lastActivityAt ? String((summary as any).lastActivityAt) : null,
       };
     }
-  } catch (err: any) {
-    // Ensure this is always a plain string - never pass the error object
-    // Handle empty objects, Error instances, and plain objects
-    if (err && typeof err === "object" && err !== null) {
-      if ("message" in err && typeof err.message === "string") {
-        errorMessage = err.message;
-      } else {
-        // For empty objects or objects without message, create a generic message
-        const keys = Object.keys(err);
-        if (keys.length === 0) {
-          errorMessage = "An unknown error occurred";
-        } else {
-          errorMessage = JSON.stringify(err);
-        }
-      }
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "message" in err && typeof (err as any).message === "string") {
+      errorMessage = (err as any).message;
+    } else if (typeof err === "string") {
+      errorMessage = err;
     } else {
-      errorMessage = String(err || "Unknown error");
+      errorMessage = "An unknown error occurred";
     }
-    // Clear brand and summary to prevent passing non-serializable data
+
     brand = null;
     summary = null;
   }
@@ -196,9 +170,7 @@ export default async function DashboardPage() {
 
         <Card className="md:col-span-3">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Last Activity</h3>
-          <p className="text-lg font-semibold text-gray-900">
-            {formatDate(summary.lastActivityAt)}
-          </p>
+          <p className="text-lg font-semibold text-gray-900">{formatDate(summary.lastActivityAt)}</p>
         </Card>
       </div>
     </div>

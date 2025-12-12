@@ -1,5 +1,6 @@
-import { adminApiFetch } from "./rewardsApi";
+import { adminApiFetch } from "./server/rewardsApi";
 import { Brand } from "./types";
+import { debugLog, debugWarn } from "./server/debug";
 
 /**
  * Sanitize a brand object to ensure it's fully serializable
@@ -37,7 +38,7 @@ export async function getFirstBrand(): Promise<Brand | null> {
         error && typeof error === "object" && "message" in error
           ? String(error.message)
           : String(error || "Unknown error");
-      console.warn("Failed to fetch brand with NEXT_PUBLIC_BRAND_ID:", errorMsg);
+      debugWarn("Failed to fetch brand with NEXT_PUBLIC_BRAND_ID:", errorMsg);
       // Continue to normal flow below
     }
   }
@@ -47,24 +48,17 @@ export async function getFirstBrand(): Promise<Brand | null> {
     // Handle both formats for flexibility
     const response = await adminApiFetch<{ brands?: Brand[] } | Brand[]>("/brands/mine");
 
-    // Log the full response in development
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[getFirstBrand] Received brands response:", {
-        responseType: Array.isArray(response) ? "array" : "object",
-        responseKeys: Array.isArray(response)
-          ? `Array(${response.length})`
-          : Object.keys(response || {}),
-        fullResponse: JSON.stringify(response, null, 2),
-      });
-    }
+    // Log minimal preview in debug mode only
+    debugLog("[getFirstBrand] Received brands response:", {
+      responseType: Array.isArray(response) ? "array" : "object",
+      count: Array.isArray(response) ? response.length : "unknown",
+    });
 
     // Check if response is wrapped in { brands: ... }
     const brands = Array.isArray(response) ? response : response.brands || [];
 
     if (brands.length === 0) {
-      if (process.env.NODE_ENV !== "production") {
-        console.log("[getFirstBrand] No brands found, returning null");
-      }
+      debugLog("[getFirstBrand] No brands found, returning null");
       return null;
     }
 
@@ -72,13 +66,10 @@ export async function getFirstBrand(): Promise<Brand | null> {
     const firstBrand = brands[0];
     const sanitizedBrand = sanitizeBrand(firstBrand);
 
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[getFirstBrand] Returning brand:", {
-        brandId: sanitizedBrand.id,
-        brandName: sanitizedBrand.name,
-        brandSlug: sanitizedBrand.slug,
-      });
-    }
+    debugLog("[getFirstBrand] Returning brand:", {
+      brandId: sanitizedBrand.id,
+      brandName: sanitizedBrand.name,
+    });
 
     return sanitizedBrand;
   } catch (error) {
@@ -88,9 +79,7 @@ export async function getFirstBrand(): Promise<Brand | null> {
       error && typeof error === "object" && "message" in error
         ? String(error.message)
         : String(error || "Unknown error");
-    if (process.env.NODE_ENV === "development") {
-      console.warn("Failed to fetch brands:", errorMsg);
-    }
+    debugWarn("Failed to fetch brands:", errorMsg);
     return null;
   }
 }
