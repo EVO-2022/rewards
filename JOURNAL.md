@@ -1,8 +1,8 @@
 # Rewards Platform - Development Journal
 
-**Last Updated:** 2024-12-19  
+**Last Updated:** 2024-12-XX  
 **Status:** Active Development  
-**Environment:** Development (Local PostgreSQL)
+**Environment:** Development (Local PostgreSQL) + Dashboard (Next.js)
 
 ---
 
@@ -534,4 +534,131 @@ Starting Container
 
 #### Status
 ✅ **AUTHENTICATION FIXED** - Production auth now works correctly with proper error handling and logging
+
+---
+
+### 2024-12-XX - Dashboard Features & API Improvements
+
+#### Completed Work
+
+1. **Ledger / Points History View**
+   - Created new dashboard page: `app/dashboard/ledger/page.tsx`
+   - Displays paginated ledger entries with filtering (type, search by user ID/email)
+   - Shows: date, type, amount, user identifier, reason, metadata preview
+   - Handles empty and error states
+   - Uses `getFirstBrand()` for brand selection
+   - **Files:** `app/dashboard/ledger/page.tsx`, `app/dashboard/layout.tsx` (navigation)
+
+2. **Issue Points UI (Admin Action)**
+   - Created new dashboard page: `app/dashboard/points/page.tsx`
+   - Form fields: `externalUserId` (required), `points` (number, min 1), `reason` (optional)
+   - Client component: `components/IssuePointsForm.tsx`
+   - API route: `app/api/brands/[brandId]/points/issue/route.ts` (POST)
+   - Forwards to Rewards API: `POST /integration/points/issue`
+   - Shows success/failure messages inline
+   - **Files:** 
+     - `app/dashboard/points/page.tsx`
+     - `components/IssuePointsForm.tsx`
+     - `app/api/brands/[brandId]/points/issue/route.ts`
+     - `app/dashboard/layout.tsx` (navigation)
+
+3. **Server-Only API Hardening**
+   - Moved `adminApiFetch` from `lib/rewardsApi.ts` to `lib/server/rewardsApi.ts`
+   - Added `import "server-only"` to enforce server-side usage
+   - Updated all server components to import from `@/lib/server/rewardsApi`
+   - Updated `lib/brandHelper.ts` to use server-only import
+   - Prevents client components from accidentally importing admin API client
+   - **Files:**
+     - `lib/server/rewardsApi.ts` (new)
+     - `lib/server/debug.ts` (new - debug logging helper)
+     - All dashboard pages updated to use new import path
+     - `lib/brandHelper.ts` updated
+
+4. **Debug Logging Cleanup**
+   - Created `lib/server/debug.ts` with `debugLog()` helper
+   - Controlled by `DEBUG_REWARDS=1` environment variable
+   - Replaced noisy `console.log` calls with conditional `debugLog`
+   - Removed debug logging from production code paths
+   - **Files:**
+     - `lib/server/debug.ts` (new)
+     - `lib/server/rewardsApi.ts` (updated)
+     - `lib/brandHelper.ts` (updated)
+     - `app/dashboard/ledger/page.tsx` (cleaned up)
+     - `app/dashboard/page.tsx` (cleaned up)
+
+5. **Production Deploy Readiness**
+   - Added `outputFileTracingRoot` to `next.config.mjs` for monorepo support
+   - Created `DEPLOYMENT.md` with:
+     - Required environment variables
+     - Local development instructions
+     - Build/start commands
+     - Notes about Clerk + Rewards API configuration
+   - **Files:**
+     - `next.config.mjs` (updated)
+     - `dashboard/DEPLOYMENT.md` (new)
+
+6. **Brand Helper Improvements**
+   - Simplified `getFirstBrand()` to use `/brands/mine` endpoint directly
+   - Removed fallback logic and complex error handling
+   - Returns first brand from user-scoped endpoint
+   - **Files:** `lib/brandHelper.ts`
+
+7. **Middleware Logging**
+   - Added request logging to `middleware.ts`
+   - Logs all incoming requests: `[mw] pathname -> href`
+   - Logs all redirects: `[mw redirect] pathname to destination`
+   - Helps debug routing and authentication flow
+   - **Files:** `dashboard/middleware.ts`
+
+8. **Ledger API Endpoint (Backend)**
+   - Added new route: `GET /api/brands/:brandId/ledger`
+   - Controller: `getBrandLedger` in `brandController.ts`
+   - Supports pagination: `page`, `pageSize` query params
+   - Returns: `{ brandId, page, pageSize, total, items }`
+   - Protected by `adminAuth` and `requireBrandAccess()` middleware
+   - **Files:**
+     - `src/routes/brandRoutes.ts` (added route)
+     - `src/controllers/brandController.ts` (added controller)
+
+#### Technical Details
+
+**Server-Only Pattern:**
+- Uses `server-only` package to prevent client-side imports
+- All admin API calls are server-side only
+- Client components cannot accidentally import server-only modules
+
+**Error Handling:**
+- Consistent error response formats
+- Plain objects (not Error instances) for Next.js serialization
+- Proper status codes and error messages
+
+**Navigation Updates:**
+- Added "Ledger" link to dashboard navigation
+- Added "Issue Points" link to dashboard navigation
+- Both routes protected by authentication
+
+#### Files Created
+- `dashboard/app/dashboard/ledger/page.tsx`
+- `dashboard/app/dashboard/points/page.tsx`
+- `dashboard/components/IssuePointsForm.tsx`
+- `dashboard/app/api/brands/[brandId]/points/issue/route.ts`
+- `dashboard/lib/server/rewardsApi.ts`
+- `dashboard/lib/server/debug.ts`
+- `dashboard/DEPLOYMENT.md`
+- `src/routes/brandRoutes.ts` (updated)
+- `src/controllers/brandController.ts` (updated)
+
+#### Files Modified
+- `dashboard/app/dashboard/layout.tsx` (navigation)
+- `dashboard/lib/brandHelper.ts` (simplified)
+- `dashboard/middleware.ts` (logging)
+- `dashboard/next.config.mjs` (file tracing)
+- All dashboard pages (updated imports)
+- `dashboard/app/dashboard/page.tsx` (removed debug logs)
+
+#### Status
+✅ **DASHBOARD FEATURES COMPLETE** - Ledger view and Issue Points UI are fully functional
+✅ **API HARDENING COMPLETE** - Server-only pattern enforced
+✅ **LOGGING CLEANUP COMPLETE** - Debug logging controlled by environment variable
+✅ **LEDGER API COMPLETE** - Backend endpoint ready for production use
 
