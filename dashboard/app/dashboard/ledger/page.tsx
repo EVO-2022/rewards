@@ -1,4 +1,4 @@
-import { adminApiFetch } from "@/lib/rewardsApi";
+import { adminApiFetch } from "@/lib/server/rewardsApi";
 import { RewardLedger } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
@@ -87,23 +87,14 @@ export default async function LedgerPage({
     if (query) queryParams.set("q", query);
 
     try {
-      ledgerData = await adminApiFetch<LedgerResponse>(
+      const data = await adminApiFetch<LedgerResponse>(
         `/brands/${brand.id}/ledger?${queryParams.toString()}`
       );
-    } catch (ledgerError: unknown) {
-      // If endpoint doesn't exist, show empty state with message
-      const errorMsg =
-        ledgerError &&
-        typeof ledgerError === "object" &&
-        ledgerError !== null &&
-        "message" in ledgerError
-          ? String(ledgerError.message)
-          : String(ledgerError || "Unknown error");
-      if (errorMsg.includes("404") || errorMsg.includes("Not Found")) {
-        errorMessage = "Ledger endpoint not available. This feature may not be implemented yet.";
-      } else {
-        errorMessage = errorMsg;
-      }
+      console.log("[ledger] SUCCESS", data);
+      ledgerData = data;
+    } catch (err) {
+      console.error("[ledger] FAILED", err);
+      throw err;
     }
   } catch (err: unknown) {
     if (err && typeof err === "object" && err !== null) {
