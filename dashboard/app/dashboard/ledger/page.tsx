@@ -86,13 +86,10 @@ export default async function LedgerPage({
     if (query) queryParams.set("q", query);
 
     try {
-      const data = await adminApiFetch<LedgerResponse>(
+      ledgerData = await adminApiFetch<LedgerResponse>(
         `/brands/${brand.id}/ledger?${queryParams.toString()}`
       );
-      console.log("[ledger] SUCCESS", data);
-      ledgerData = data;
     } catch (err) {
-      console.error("[ledger] FAILED", err);
       throw err;
     }
   } catch (err: unknown) {
