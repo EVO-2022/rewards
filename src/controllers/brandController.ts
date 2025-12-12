@@ -531,3 +531,34 @@ export const getBrandEvents = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getBrandLedger = async (req: any, res: Response) => {
+  try {
+    const brandId = req.brandId;
+
+    const page = Number(req.query.page ?? 1);
+    const pageSize = Number(req.query.pageSize ?? 50);
+
+    const ledger = await prisma.rewardLedger.findMany({
+      where: { brandId },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
+    const total = await prisma.rewardLedger.count({
+      where: { brandId },
+    });
+
+    return res.json({
+      brandId,
+      page,
+      pageSize,
+      total,
+      items: ledger,
+    });
+  } catch (err) {
+    console.error("[getBrandLedger] error", err);
+    return res.status(500).json({ error: "Failed to load ledger" });
+  }
+};
