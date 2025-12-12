@@ -27,12 +27,6 @@ export default async function DashboardPage() {
   try {
     brand = await getFirstBrand();
 
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[DashboardPage] getFirstBrand returned:", {
-        brand: brand ? { id: brand.id, name: brand.name, slug: brand.slug } : null,
-      });
-    }
-
     if (!brand) {
       return (
         <div>
