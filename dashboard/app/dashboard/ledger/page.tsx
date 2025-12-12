@@ -1,7 +1,8 @@
 import { adminApiFetch } from "@/lib/server/rewardsApi";
-import { RewardLedger, Brand } from "@/lib/types";
+import { RewardLedger } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
+import { getFirstBrand } from "@/lib/brandHelper";
 
 // Force dynamic rendering since we use auth() which requires headers()
 export const dynamic = "force-dynamic";
@@ -59,10 +60,9 @@ export default async function LedgerPage({
   const query = params.q || "";
 
   try {
-    const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
-    brand = brands?.[0] || null;
+    brand = await getFirstBrand();
 
-    if (!brand?.id) {
+    if (!brand) {
       return (
         <div>
           <PageHeader title="Ledger" />
