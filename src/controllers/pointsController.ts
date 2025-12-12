@@ -3,13 +3,43 @@ import { rewardsEngine } from "../services/rewardsEngine";
 import { fraudDetection } from "../services/fraudDetection";
 import { z } from "zod";
 import { prisma } from "../utils/prisma";
+import { LedgerType } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const issuePointsSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  externalUserId: z.string().min(1).optional(),
   amount: z.number().positive(),
   reason: z.string().optional(),
   metadata: z.record(z.any()).optional(),
+}).refine((data) => data.userId || data.externalUserId, {
+  message: "Either userId or externalUserId must be provided",
 });
+
+// Helper to find or create integration user
+async function findOrCreateIntegrationUser(
+  brandId: string,
+  externalUserId: string
+): Promise<{ id: string }> {
+  const integrationClerkId = `integration_${brandId}_${externalUserId}`;
+  
+  // Try to find existing user
+  const existing = await prisma.user.findUnique({
+    where: { clerkId: integrationClerkId },
+  });
+  
+  if (existing) {
+    return existing;
+  }
+  
+  // Create new user
+  return await prisma.user.create({
+    data: {
+      clerkId: integrationClerkId,
+      email: null,
+    },
+  });
+}
 
 const burnPointsSchema = z.object({
   userId: z.string().uuid(),
@@ -22,20 +52,49 @@ export const issuePoints = async (req: Request, res: Response) => {
   try {
     const { brandId } = req.params;
     const data = issuePointsSchema.parse(req.body);
+    const actorUserId = req.auth?.userId || null;
 
-    // Run fraud checks
-    await fraudDetection.runFraudChecks(brandId, data.userId, data.amount);
+    // Resolve userId from externalUserId if provided
+    let targetUserId: string;
+    if (data.userId) {
+      targetUserId = data.userId;
+    } else if (data.externalUserId) {
+      const user = await findOrCreateIntegrationUser(brandId, data.externalUserId);
+      targetUserId = user.id;
+    } else {
+      return res.status(400).json({ error: "Either userId or externalUserId must be provided" });
+    }
 
-    // Mint points
-    const ledger = await rewardsEngine.mintPoints(
-      brandId,
-      data.userId,
-      data.amount,
-      data.reason || "manual_issue",
-      data.metadata
-    );
+    // Use transaction to ensure fraud checks and ledger creation are atomic
+    const ledger = await prisma.$transaction(async (tx) => {
+      // Run fraud checks (these may create fraud flags, so include in transaction)
+      await fraudDetection.runFraudChecks(brandId, targetUserId, data.amount);
 
-    res.status(201).json(ledger);
+      // Create ledger entry directly in transaction
+      const ledgerEntry = await tx.rewardLedger.create({
+        data: {
+          brandId,
+          userId: targetUserId,
+          type: LedgerType.MINT,
+          amount: new Decimal(data.amount),
+          reason: data.reason || "Issued points",
+          metadata: {
+            ...(data.metadata || {}),
+            actorUserId: actorUserId,
+            source: "admin_issue_points",
+            ...(data.externalUserId ? { externalUserId: data.externalUserId } : {}),
+          },
+        },
+      });
+
+      return ledgerEntry;
+    });
+
+    res.status(201).json({
+      ...ledger,
+      id: ledger.id,
+      ok: true,
+    });
   } catch (error) {
     console.error("Issue points error:", error);
     res.status(500).json({ error: "Failed to issue points" });

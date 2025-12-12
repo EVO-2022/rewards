@@ -45,10 +45,19 @@ export function IssuePointsForm({ brandId }: IssuePointsFormProps) {
         type: "success",
         text: `Successfully issued ${points} points to ${externalUserId}`,
       });
+      
+      // Clear form
       setExternalUserId("");
       setPoints("");
       setReason("");
+      
+      // Refresh to update ledger
       router.refresh();
+      
+      // Optionally redirect to ledger after a short delay
+      setTimeout(() => {
+        router.push("/dashboard/ledger");
+      }, 1500);
     } catch (err) {
       setMessage({
         type: "error",
@@ -118,7 +127,17 @@ export function IssuePointsForm({ brandId }: IssuePointsFormProps) {
                 : "bg-red-50 border border-red-200 text-red-800"
             }`}
           >
-            {message.text}
+            <div className="flex items-center justify-between">
+              <span>{message.text}</span>
+              {message.type === "success" && (
+                <a
+                  href="/dashboard/ledger"
+                  className="ml-4 text-sm font-medium text-green-700 hover:text-green-900 underline"
+                >
+                  View Ledger →
+                </a>
+              )}
+            </div>
           </div>
         )}
 

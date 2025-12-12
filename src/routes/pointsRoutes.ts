@@ -7,10 +7,13 @@ import * as pointsController from "../controllers/pointsController";
 const router = Router({ mergeParams: true });
 
 const issuePointsSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  externalUserId: z.string().min(1).optional(),
   amount: z.number().positive(),
   reason: z.string().optional(),
   metadata: z.record(z.any()).optional(),
+}).refine((data) => data.userId || data.externalUserId, {
+  message: "Either userId or externalUserId must be provided",
 });
 
 const burnPointsSchema = z.object({

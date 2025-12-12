@@ -1,5 +1,6 @@
 {
-  "/dashboard/members/page": "app/dashboard/members/page.js",
-  "/dashboard/redemptions/page": "app/dashboard/redemptions/page.js",
-  "/dashboard/ledger/page": "app/dashboard/ledger/page.js"
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/api-keys/page": "app/dashboard/api-keys/page.js",
+  "/dashboard/ledger/page": "app/dashboard/ledger/page.js",
+  "/dashboard/redemptions/page": "app/dashboard/redemptions/page.js"
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-
-const REWARDS_API_URL = process.env.NEXT_PUBLIC_REWARDS_API_URL || "http://localhost:3000/api";
+import { revalidatePath } from "next/cache";
+import { adminApiFetch } from "@/lib/server/rewardsApi";
 
 export async function POST(
   request: NextRequest,
@@ -16,7 +16,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    await params; // brandId is available but backend extracts from token
+    const { brandId } = await params;
 
     // Validate required fields
     if (!body.externalUserId || !body.points) {
@@ -30,36 +30,30 @@ export async function POST(
       return NextResponse.json({ error: "points must be a positive number" }, { status: 400 });
     }
 
-    // Forward request to Rewards API
-    const response = await fetch(`${REWARDS_API_URL}/integration/points/issue`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        externalUserId: body.externalUserId,
-        points: body.points,
-        reason: body.reason,
-        // Note: backend may extract brandId from token, but include it if needed
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch {
-        errorData = { error: errorText || "Failed to issue points" };
+    // Call brand route with externalUserId (backend will resolve it)
+    const data = await adminApiFetch<{ id: string; ok: boolean }>(
+      `/brands/${brandId}/points/issue`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          externalUserId: body.externalUserId,
+          amount: body.points,
+          reason: body.reason,
+          metadata: body.metadata,
+        }),
       }
-      return NextResponse.json(errorData, { status: response.status });
-    }
+    );
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: 200 });
-  } catch (error) {
-    console.error("Issue points error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    // Revalidate ledger and points pages
+    revalidatePath("/dashboard/ledger");
+    revalidatePath("/dashboard/points");
+
+    return NextResponse.json(data, { status: 201 });
+  } catch (error: unknown) {
+    const errorMessage =
+      error && typeof error === "object" && "message" in error
+        ? String(error.message)
+        : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
