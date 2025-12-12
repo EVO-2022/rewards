@@ -1,8 +1,7 @@
 import { adminApiFetch } from "@/lib/server/rewardsApi";
-import { RewardLedger } from "@/lib/types";
+import { RewardLedger, Brand } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
-import { getFirstBrand } from "@/lib/brandHelper";
 
 // Force dynamic rendering since we use auth() which requires headers()
 export const dynamic = "force-dynamic";
@@ -60,18 +59,18 @@ export default async function LedgerPage({
   const query = params.q || "";
 
   try {
-    brand = await getFirstBrand();
+    const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
+    brand = brands?.[0] || null;
 
-    if (!brand) {
+    if (!brand?.id) {
       return (
         <div>
           <PageHeader title="Ledger" />
           <Card>
             <div className="text-center py-12">
               <p className="text-lg font-medium text-gray-900 mb-2">
-                You don't have any brands yet.
+                No accessible brands for this user.
               </p>
-              <p className="text-gray-600">Brand creation UI will go here.</p>
             </div>
           </Card>
         </div>
