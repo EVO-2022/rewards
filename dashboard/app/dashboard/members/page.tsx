@@ -5,6 +5,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { MembersTable } from "@/components/MembersTable";
 import { getFirstBrand } from "@/lib/brandHelper";
 
+// Force dynamic rendering since we use auth() which requires headers()
+export const dynamic = "force-dynamic";
+
 export default async function MembersPage() {
   let brand = null;
   let errorMessage: string | null = null;

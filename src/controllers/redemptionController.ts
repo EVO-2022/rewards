@@ -79,20 +79,20 @@ export const getRedemptions = async (req: Request, res: Response) => {
     // Get total count and items in parallel
     const [items, total] = await Promise.all([
       prisma.redemption.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              phone: true,
-            },
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
           },
-          campaign: true,
         },
-        orderBy: {
-          createdAt: "desc",
-        },
+        campaign: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
         take: finalLimit,
         skip: finalSkip,
       }),

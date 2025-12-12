@@ -4,6 +4,9 @@ import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { getFirstBrand } from "@/lib/brandHelper";
 
+// Force dynamic rendering since we use auth() which requires headers()
+export const dynamic = "force-dynamic";
+
 export default async function RedemptionsPage() {
   let brand = null;
   let errorMessage: string | null = null;

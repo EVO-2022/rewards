@@ -4,6 +4,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { ApiKeysTable } from "@/components/ApiKeysTable";
 import { getFirstBrand } from "@/lib/brandHelper";
 
+// Force dynamic rendering since we use auth() which requires headers()
+export const dynamic = "force-dynamic";
+
 export default async function ApiKeysPage() {
   let brand = null;
   let errorMessage: string | null = null;

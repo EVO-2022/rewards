@@ -25,13 +25,13 @@ export const createBrand = async (req: Request, res: Response) => {
     if (!userId && process.env.SMOKE_TEST_BYPASS !== "true") {
       return res.status(401).json({ error: "Unauthorized" });
     }
-
+    
     // In smoke test mode, userId should already be set by the test route
     if (!userId) {
       console.error("⚠️ No userId in smoke test mode - this should not happen");
       return res.status(500).json({ error: "Internal error: user not set" });
     }
-
+    
     const effectiveUserId = userId;
 
     const data = createBrandSchema.parse(req.body);

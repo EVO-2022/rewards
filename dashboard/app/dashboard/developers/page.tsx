@@ -6,6 +6,9 @@ import { CopyField } from "@/components/CopyField";
 import { getFirstBrand } from "@/lib/brandHelper";
 import Link from "next/link";
 
+// Force dynamic rendering since we use auth() which requires headers()
+export const dynamic = "force-dynamic";
+
 function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return "Never";
   try {

@@ -43,7 +43,7 @@ async function findIntegrationUser(
   externalUserId: string
 ): Promise<{ id: string } | null> {
   const integrationClerkId = `integration_${brandId}_${externalUserId}`;
-
+  
   return await prisma.user.findUnique({
     where: { clerkId: integrationClerkId },
   });
@@ -154,10 +154,10 @@ const balanceQuerySchema = z.object({
 router.get("/points/balance", async (req, res) => {
   try {
     const { brandId } = req.integrationAuth!;
-
+    
     // Validate query parameters
     const queryParams = balanceQuerySchema.safeParse(req.query);
-
+    
     if (!queryParams.success) {
       return res.status(400).json({
         error: "Validation error",

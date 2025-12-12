@@ -1,7 +1,1 @@
-{
-  "/dashboard/page": "app/dashboard/page.js",
-  "/dashboard/developers/page": "app/dashboard/developers/page.js",
-  "/dashboard/events/page": "app/dashboard/events/page.js",
-  "/dashboard/redemptions/page": "app/dashboard/redemptions/page.js",
-  "/dashboard/api-keys/page": "app/dashboard/api-keys/page.js"
-}
+{}
