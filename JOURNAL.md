@@ -662,3 +662,157 @@ Starting Container
 ✅ **LOGGING CLEANUP COMPLETE** - Debug logging controlled by environment variable
 ✅ **LEDGER API COMPLETE** - Backend endpoint ready for production use
 
+---
+
+### 2024-12-XX - Backend Hardening: Ledger as Single Source of Truth & Atomicity
+
+#### Core Architectural Changes
+
+**Ledger as Single Source of Truth:**
+- `RewardLedger` is now the authoritative record for all point mutations
+- All point-mutating operations write to `RewardLedger` first
+- Balance calculations derived from ledger aggregation (SUM(MINT) - SUM(BURN))
+- No separate balance tables or caches that can drift from ledger state
+
+**Point-Mutating Flows Updated:**
+All flows now write to `RewardLedger` with proper metadata:
+
+1. **Admin Issue Points** (`POST /api/brands/:brandId/points/issue`)
+   - Creates `RewardLedger` entry with type `MINT`
+   - Metadata includes: `actorUserId`, `source: "admin_issue_points"`, `externalUserId` (if provided)
+   - Supports both `userId` (UUID) and `externalUserId` (string) input
+   - Resolves `externalUserId` to internal `userId` using integration user pattern
+
+2. **Admin Burn Points** (`POST /api/brands/:brandId/points/burn`)
+   - Creates `RewardLedger` entry with type `BURN`
+   - Metadata includes: `actorUserId`, `source: "admin_burn_points"`
+   - Balance check performed inside transaction before ledger write
+
+3. **Admin Redemption Create** (`POST /api/brands/:brandId/redemptions`)
+   - Creates `RewardLedger` entry with type `BURN` for points used
+   - Metadata includes: `actorUserId`, `source: "admin_redemption"`, `redemptionId`
+
+4. **Admin Redemption Cancel/Refund** (`POST /api/brands/:brandId/redemptions/:id/cancel`)
+   - Creates `RewardLedger` entry with type `MINT` to refund points
+   - Metadata includes: `actorUserId`, `source: "admin_redemption_refund"`, `redemptionId`
+
+5. **Integration Issue** (`POST /api/integration/points/issue`)
+   - Creates `RewardLedger` entry with type `MINT`
+   - Metadata includes: `externalUserId`, `source: "api_integration"`, `apiKeyId`
+
+6. **Integration Redeem** (`POST /api/integration/points/redeem`)
+   - Creates `RewardLedger` entry with type `BURN`
+   - Metadata includes: `externalUserId`, `source: "api_integration"`, `apiKeyId`, `redemptionId`
+
+#### Atomicity Fixes
+
+**Transaction-Aware RewardsEngine:**
+- Updated `RewardsEngine` methods to accept optional Prisma transaction client
+- Methods can run inside `prisma.$transaction()` for atomicity
+- Supports both standalone and transaction-scoped operations
+
+**Transaction-Wrapped Operations:**
+
+1. **Admin Burn Points:**
+   - Balance check moved inside transaction
+   - Ledger write happens atomically with balance validation
+   - Prevents race conditions where balance could change between check and write
+   - Throws `INSUFFICIENT_BALANCE` error if balance check fails
+
+2. **Admin Redemption Create:**
+   - Balance check, redemption creation, and ledger write in single transaction
+   - Ensures redemption and ledger entry are created together or not at all
+   - Prevents partial state where redemption exists but ledger entry is missing
+
+3. **Admin Redemption Cancel/Refund:**
+   - Redemption status update and refund ledger entry in single transaction
+   - Ensures refund is recorded atomically with cancellation
+
+**Transaction Pattern:**
+```typescript
+await prisma.$transaction(async (tx) => {
+  // Balance check using tx client
+  const hasBalance = await rewardsEngine.hasSufficientBalance(brandId, userId, amount, tx);
+  
+  // Ledger write using tx client
+  const ledger = await rewardsEngine.burnPoints(brandId, userId, amount, reason, metadata, tx);
+  
+  // Other operations...
+});
+```
+
+#### Permission Enforcement
+
+**Role-Based Access Control (RBAC):**
+
+1. **VIEWER Role:**
+   - Read-only access to ledger entries
+   - Read-only access to redemptions
+   - Read-only access to brand information
+   - Cannot mutate points or create redemptions
+
+2. **MANAGER Role:**
+   - Issue points (create MINT ledger entries)
+   - Burn points (create BURN ledger entries)
+   - Create redemptions (creates redemption + BURN ledger entry)
+   - Cancel/refund redemptions (updates redemption + creates MINT refund entry)
+   - Update brand settings
+   - Cannot perform destructive actions (delete brand, manage API keys)
+
+3. **OWNER Role:**
+   - All MANAGER permissions
+   - Delete brand (destructive action)
+   - Manage API keys (create, delete)
+   - Full brand control
+
+**Route-Level Enforcement:**
+- All point-mutating routes protected by `requireBrandAccess("MANAGER")` or `requireBrandAccess("OWNER")`
+- Ledger read routes protected by `requireBrandAccess()` (any role)
+- Redemption routes protected by `requireBrandAccess("MANAGER")`
+- Brand deletion and API key management require `requireBrandAccess("OWNER")`
+
+**Middleware Chain:**
+```
+authenticate → syncUser → requireBrandAccess(role) → controller
+```
+
+#### Technical Implementation Details
+
+**Files Modified:**
+
+1. **`src/controllers/pointsController.ts`:**
+   - `issuePoints`: Transaction-wrapped, supports externalUserId resolution
+   - `burnPoints`: Transaction-wrapped with balance check inside transaction
+   - Added `findOrCreateIntegrationUser` helper for externalUserId resolution
+
+2. **`src/services/rewardsEngine.ts`:**
+   - Updated `mintPoints`, `burnPoints`, `hasSufficientBalance` to accept optional `tx` parameter
+   - Methods work with both standalone Prisma client and transaction client
+   - Maintains backward compatibility for non-transaction usage
+
+3. **`src/routes/pointsRoutes.ts`:**
+   - Updated `issuePointsSchema` to accept either `userId` or `externalUserId`
+   - Added refinement validation to ensure at least one is provided
+
+4. **`src/controllers/redemptionController.ts`:**
+   - `createRedemption`: Transaction-wrapped (balance check + redemption + ledger write)
+   - `cancelRedemption`: Transaction-wrapped (redemption update + refund ledger entry)
+
+5. **`src/middleware/auth.ts`:**
+   - `requireBrandAccess` updated to enforce role-based permissions
+   - VIEWER, MANAGER, OWNER roles properly enforced at route level
+
+**Transaction Benefits:**
+- Prevents race conditions in balance checks
+- Ensures ledger entries are created atomically with business operations
+- Maintains data consistency even under concurrent load
+- Rollback on any failure prevents partial state
+
+#### Status
+✅ **LEDGER AS SINGLE SOURCE OF TRUTH** - All point mutations write to RewardLedger
+✅ **ATOMICITY COMPLETE** - All critical operations wrapped in transactions
+✅ **PERMISSION ENFORCEMENT COMPLETE** - Role-based access control implemented
+✅ **FUNCTIONAL CORE COMPLETE** - Backend hardening complete, ready for production
+
+**Note:** This work completes the functional core for ledger correctness and permissions. No UI/UX changes were made; this is purely backend hardening to ensure data integrity and proper access control.
+
