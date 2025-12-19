@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { rewardsEngine } from "../services/rewardsEngine";
 import { prisma } from "../utils/prisma";
 import { z } from "zod";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const createRedemptionSchema = z.object({
   userId: z.string().uuid(),
@@ -15,43 +16,60 @@ export const createRedemption = async (req: Request, res: Response) => {
     const { brandId } = req.params;
     const data = createRedemptionSchema.parse(req.body);
 
-    // Check balance
-    const hasBalance = await rewardsEngine.hasSufficientBalance(
-      brandId,
-      data.userId,
-      data.pointsUsed
-    );
+    const result = await prisma.$transaction(async (tx) => {
+      // Check balance INSIDE the transaction
+      const hasBalance = await rewardsEngine.hasSufficientBalance(
+        brandId,
+        data.userId,
+        data.pointsUsed,
+        tx
+      );
 
-    if (!hasBalance) {
+      if (!hasBalance) {
+        const err: any = new Error("INSUFFICIENT_BALANCE");
+        err.code = "INSUFFICIENT_BALANCE";
+        throw err;
+      }
+
+      // Create redemption (pending)
+      const redemption = await tx.redemption.create({
+        data: {
+          brandId,
+          userId: data.userId,
+          campaignId: data.campaignId || null,
+          pointsUsed: new Decimal(data.pointsUsed),
+          status: "pending",
+          metadata: data.metadata || {},
+        },
+      });
+
+      // Burn points (ledger write) in same tx
+      await rewardsEngine.burnPoints(
+        brandId,
+        data.userId,
+        data.pointsUsed,
+        "redemption",
+        {
+          redemptionId: redemption.id,
+          campaignId: data.campaignId,
+        },
+        tx
+      );
+
+      // Mark completed in same tx
+      const updatedRedemption = await tx.redemption.update({
+        where: { id: redemption.id },
+        data: { status: "completed" },
+      });
+
+      return updatedRedemption;
+    });
+
+    res.status(201).json(result);
+  } catch (error: any) {
+    if (error?.code === "INSUFFICIENT_BALANCE" || error?.message === "INSUFFICIENT_BALANCE") {
       return res.status(400).json({ error: "Insufficient balance" });
     }
-
-    // Create redemption
-    const redemption = await prisma.redemption.create({
-      data: {
-        brandId,
-        userId: data.userId,
-        campaignId: data.campaignId || null,
-        pointsUsed: data.pointsUsed,
-        status: "pending",
-        metadata: data.metadata || {},
-      },
-    });
-
-    // Burn points
-    await rewardsEngine.burnPoints(brandId, data.userId, data.pointsUsed, "redemption", {
-      redemptionId: redemption.id,
-      campaignId: data.campaignId,
-    });
-
-    // Update redemption status
-    const updatedRedemption = await prisma.redemption.update({
-      where: { id: redemption.id },
-      data: { status: "completed" },
-    });
-
-    res.status(201).json(updatedRedemption);
-  } catch (error) {
     console.error("Create redemption error:", error);
     res.status(500).json({ error: "Failed to create redemption" });
   }
@@ -79,20 +97,20 @@ export const getRedemptions = async (req: Request, res: Response) => {
     // Get total count and items in parallel
     const [items, total] = await Promise.all([
       prisma.redemption.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            phone: true,
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+            },
           },
+          campaign: true,
         },
-        campaign: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+        orderBy: {
+          createdAt: "desc",
+        },
         take: finalLimit,
         skip: finalSkip,
       }),
@@ -186,37 +204,49 @@ export const cancelRedemption = async (req: Request, res: Response) => {
   try {
     const { redemptionId } = req.params;
 
-    const redemption = await prisma.redemption.findUnique({
-      where: { id: redemptionId },
+    const result = await prisma.$transaction(async (tx) => {
+      const redemption = await tx.redemption.findUnique({
+        where: { id: redemptionId },
+      });
+
+      if (!redemption) {
+        const err: any = new Error("NOT_FOUND");
+        err.code = "NOT_FOUND";
+        throw err;
+      }
+
+      if (redemption.status !== "pending") {
+        const err: any = new Error("NOT_PENDING");
+        err.code = "NOT_PENDING";
+        throw err;
+      }
+
+      // Refund points (ledger write) in same tx
+      await rewardsEngine.mintPoints(
+        redemption.brandId,
+        redemption.userId,
+        redemption.pointsUsed.toNumber(),
+        "redemption_refund",
+        { originalRedemptionId: redemption.id },
+        tx
+      );
+
+      // Update status in same tx
+      const updated = await tx.redemption.update({
+        where: { id: redemptionId },
+        data: { status: "cancelled" },
+      });
+
+      return updated;
     });
 
-    if (!redemption) {
-      return res.status(404).json({ error: "Redemption not found" });
-    }
-
-    if (redemption.status !== "pending") {
+    res.json(result);
+  } catch (error: any) {
+    if (error?.code === "NOT_FOUND") return res.status(404).json({ error: "Redemption not found" });
+    if (error?.code === "NOT_PENDING") {
       return res.status(400).json({ error: "Can only cancel pending redemptions" });
     }
 
-    // Refund points
-    await rewardsEngine.mintPoints(
-      redemption.brandId,
-      redemption.userId,
-      redemption.pointsUsed.toNumber(),
-      "redemption_refund",
-      {
-        originalRedemptionId: redemption.id,
-      }
-    );
-
-    // Update status
-    const updated = await prisma.redemption.update({
-      where: { id: redemptionId },
-      data: { status: "cancelled" },
-    });
-
-    res.json(updated);
-  } catch (error) {
     console.error("Cancel redemption error:", error);
     res.status(500).json({ error: "Failed to cancel redemption" });
   }

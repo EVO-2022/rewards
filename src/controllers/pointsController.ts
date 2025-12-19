@@ -6,15 +6,17 @@ import { prisma } from "../utils/prisma";
 import { LedgerType } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 
-const issuePointsSchema = z.object({
-  userId: z.string().uuid().optional(),
-  externalUserId: z.string().min(1).optional(),
-  amount: z.number().positive(),
-  reason: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
-}).refine((data) => data.userId || data.externalUserId, {
-  message: "Either userId or externalUserId must be provided",
-});
+const issuePointsSchema = z
+  .object({
+    userId: z.string().uuid().optional(),
+    externalUserId: z.string().min(1).optional(),
+    amount: z.number().positive(),
+    reason: z.string().optional(),
+    metadata: z.record(z.any()).optional(),
+  })
+  .refine((data) => data.userId || data.externalUserId, {
+    message: "Either userId or externalUserId must be provided",
+  });
 
 // Helper to find or create integration user
 async function findOrCreateIntegrationUser(
@@ -22,16 +24,16 @@ async function findOrCreateIntegrationUser(
   externalUserId: string
 ): Promise<{ id: string }> {
   const integrationClerkId = `integration_${brandId}_${externalUserId}`;
-  
+
   // Try to find existing user
   const existing = await prisma.user.findUnique({
     where: { clerkId: integrationClerkId },
   });
-  
+
   if (existing) {
     return existing;
   }
-  
+
   // Create new user
   return await prisma.user.create({
     data: {
@@ -105,25 +107,43 @@ export const burnPoints = async (req: Request, res: Response) => {
   try {
     const { brandId } = req.params;
     const data = burnPointsSchema.parse(req.body);
+    const actorUserId = req.auth?.userId || null;
 
-    // Check balance
-    const hasBalance = await rewardsEngine.hasSufficientBalance(brandId, data.userId, data.amount);
+    const ledger = await prisma.$transaction(async (tx) => {
+      // Check balance INSIDE the transaction
+      const hasBalance = await rewardsEngine.hasSufficientBalance(
+        brandId,
+        data.userId,
+        data.amount,
+        tx
+      );
 
-    if (!hasBalance) {
-      return res.status(400).json({ error: "Insufficient balance" });
-    }
+      if (!hasBalance) {
+        const err: any = new Error("INSUFFICIENT_BALANCE");
+        err.code = "INSUFFICIENT_BALANCE";
+        throw err;
+      }
 
-    // Burn points
-    const ledger = await rewardsEngine.burnPoints(
-      brandId,
-      data.userId,
-      data.amount,
-      data.reason || "manual_burn",
-      data.metadata
-    );
+      // Burn points (ledger write) inside tx
+      return await rewardsEngine.burnPoints(
+        brandId,
+        data.userId,
+        data.amount,
+        data.reason || "manual_burn",
+        {
+          ...(data.metadata || {}),
+          actorUserId,
+          source: "admin_burn_points",
+        },
+        tx
+      );
+    });
 
     res.status(201).json(ledger);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "INSUFFICIENT_BALANCE" || error?.message === "INSUFFICIENT_BALANCE") {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
     console.error("Burn points error:", error);
     res.status(500).json({ error: "Failed to burn points" });
   }

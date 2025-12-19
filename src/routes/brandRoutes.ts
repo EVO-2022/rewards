@@ -28,13 +28,27 @@ router.post("/", authenticate, validate(createBrandSchema), brandController.crea
 // Public route (no auth required)
 router.get("/", brandController.getBrands);
 
-// Brand-scoped admin routes (require adminAuth + brand access)
+// Brand-scoped routes (read-only) -> VIEWER+
 router.get("/:brandId/summary", adminAuth, requireBrandAccess(), brandController.getBrandSummary);
 router.get("/:brandId/members", adminAuth, requireBrandAccess(), brandController.getBrandMembers);
 router.get("/:brandId/events", adminAuth, requireBrandAccess(), brandController.getBrandEvents);
 router.get("/:brandId/ledger", adminAuth, requireBrandAccess(), brandController.getBrandLedger);
 router.get("/:brandId", adminAuth, requireBrandAccess(), brandController.getBrand);
-router.patch("/:brandId", adminAuth, requireBrandAccess(), validate(updateBrandSchema), brandController.updateBrand);
-router.delete("/:brandId", adminAuth, requireBrandAccess(), brandController.deleteBrand);
+
+// Mutating -> MANAGER+ / OWNER+
+router.patch(
+  "/:brandId",
+  adminAuth,
+  requireBrandAccess("MANAGER"),
+  validate(updateBrandSchema),
+  brandController.updateBrand
+);
+
+router.delete(
+  "/:brandId",
+  adminAuth,
+  requireBrandAccess("OWNER"),
+  brandController.deleteBrand
+);
 
 export default router;

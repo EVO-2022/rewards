@@ -6,15 +6,17 @@ import * as pointsController from "../controllers/pointsController";
 
 const router = Router({ mergeParams: true });
 
-const issuePointsSchema = z.object({
-  userId: z.string().uuid().optional(),
-  externalUserId: z.string().min(1).optional(),
-  amount: z.number().positive(),
-  reason: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
-}).refine((data) => data.userId || data.externalUserId, {
-  message: "Either userId or externalUserId must be provided",
-});
+const issuePointsSchema = z
+  .object({
+    userId: z.string().uuid().optional(),
+    externalUserId: z.string().min(1).optional(),
+    amount: z.number().positive(),
+    reason: z.string().optional(),
+    metadata: z.record(z.any()).optional(),
+  })
+  .refine((data) => data.userId || data.externalUserId, {
+    message: "Either userId or externalUserId must be provided",
+  });
 
 const burnPointsSchema = z.object({
   userId: z.string().uuid(),
@@ -30,15 +32,8 @@ router.use("/:brandId", requireBrandAccess("MANAGER"));
 
 router.post("/:brandId/points/issue", validate(issuePointsSchema), pointsController.issuePoints);
 router.post("/:brandId/points/burn", validate(burnPointsSchema), pointsController.burnPoints);
-router.get(
-  "/:brandId/points/balance/:userId",
-  requireBrandAccess(),
-  pointsController.getUserBalance
-);
-router.get(
-  "/:brandId/points/ledger/:userId",
-  requireBrandAccess(),
-  pointsController.getLedgerHistory
-);
+
+router.get("/:brandId/points/balance/:userId", requireBrandAccess(), pointsController.getUserBalance);
+router.get("/:brandId/points/ledger/:userId", requireBrandAccess(), pointsController.getLedgerHistory);
 
 export default router;
