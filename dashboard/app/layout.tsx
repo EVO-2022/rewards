@@ -7,9 +7,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Rewards Admin",
   description: "Admin dashboard for the Rewards platform",
-  icons: {
-    icon: "/icon.jpg",
-  },
 };
 
 export default function RootLayout({
@@ -29,8 +26,8 @@ export default function RootLayout({
                     <Image
                       src="/logo.png"
                       alt="Logo"
-                      width={32}
-                      height={32}
+                      width={64}
+                      height={64}
                       className="rounded"
                     />
                     <span className="text-xl font-medium text-gray-100">Rewards Admin</span>
