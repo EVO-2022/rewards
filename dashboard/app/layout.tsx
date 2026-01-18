@@ -7,6 +7,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Rewards Admin",
   description: "Admin dashboard for the Rewards platform",
+  icons: {
+    icon: "/icon.jpg",
+  },
 };
 
 export default function RootLayout({
