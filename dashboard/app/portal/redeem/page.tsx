@@ -114,7 +114,7 @@ function RedeemPageContent() {
         router.push("/portal");
         router.refresh();
       }, 2000);
-    } catch (_error) {
+    } catch {
       setMessage({
         type: "error",
         text: "An error occurred. Please try again.",
