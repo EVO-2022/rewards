@@ -45,15 +45,15 @@ export function IssuePointsForm({ brandId }: IssuePointsFormProps) {
         type: "success",
         text: `Successfully issued ${points} points to ${externalUserId}`,
       });
-      
+
       // Clear form
       setExternalUserId("");
       setPoints("");
       setReason("");
-      
+
       // Refresh to update ledger
       router.refresh();
-      
+
       // Optionally redirect to ledger after a short delay
       setTimeout(() => {
         router.push("/dashboard/ledger");

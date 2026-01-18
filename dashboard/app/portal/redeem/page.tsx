@@ -61,7 +61,7 @@ function RedeemPageContent() {
     }
   }
 
-  async function handleRedeem(item: typeof CATALOG[0]) {
+  async function handleRedeem(item: (typeof CATALOG)[0]) {
     if (!brandId) {
       setMessage({ type: "error", text: "Brand ID not found" });
       return;
@@ -186,7 +186,9 @@ function RedeemPageContent() {
           </Link>
           <h1 className="text-2xl font-bold mb-2">Redeem Points</h1>
           {balance !== null && (
-            <p className="text-gray-600">Your balance: <span className="font-semibold">{balance} points</span></p>
+            <p className="text-gray-600">
+              Your balance: <span className="font-semibold">{balance} points</span>
+            </p>
           )}
         </div>
 
@@ -239,13 +241,15 @@ function RedeemPageContent() {
 
 export default function RedeemPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-gray-600">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 p-8">
+          <div className="max-w-4xl mx-auto">
+            <p className="text-gray-600">Loading...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <RedeemPageContent />
     </Suspense>
   );

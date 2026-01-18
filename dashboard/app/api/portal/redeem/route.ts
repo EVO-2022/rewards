@@ -16,10 +16,7 @@ export async function POST(request: NextRequest) {
     const { brandId, pointsUsed, metadata } = body;
 
     if (!brandId || !pointsUsed) {
-      return NextResponse.json(
-        { error: "brandId and pointsUsed are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "brandId and pointsUsed are required" }, { status: 400 });
     }
 
     if (typeof pointsUsed !== "number" || pointsUsed < 1) {
@@ -31,16 +28,13 @@ export async function POST(request: NextRequest) {
 
     // Call portal redeem endpoint - backend derives userId from req.auth.userId
     // Client only sends: brandId, pointsUsed, metadata (NO userId)
-    const redemption = await adminApiFetch<any>(
-      `/portal/${brandId}/redeem`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          pointsUsed,
-          metadata: metadata || {},
-        }),
-      }
-    );
+    const redemption = await adminApiFetch<any>(`/portal/${brandId}/redeem`, {
+      method: "POST",
+      body: JSON.stringify({
+        pointsUsed,
+        metadata: metadata || {},
+      }),
+    });
 
     // Revalidate portal pages
     revalidatePath("/portal");

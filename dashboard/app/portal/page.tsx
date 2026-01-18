@@ -39,14 +39,12 @@ export default async function PortalPage() {
 
   // Get balance for current user
   let balance = 0;
-  let userId: string | null = null;
   try {
     const balanceData = await adminApiFetch<{ balance: number; userId: string; brandId: string }>(
       `/portal/${brandId}/balance`,
       { method: "GET" }
     );
     balance = balanceData.balance || 0;
-    userId = balanceData.userId || null;
   } catch (error) {
     console.error("Error fetching balance:", error);
   }

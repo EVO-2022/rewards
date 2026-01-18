@@ -76,11 +76,18 @@ export default async function DashboardPage() {
         completedRedemptions: Number((summary as any).completedRedemptions ?? 0),
         pendingRedemptions: Number((summary as any).pendingRedemptions ?? 0),
         failedRedemptions: Number((summary as any).failedRedemptions ?? 0),
-        lastActivityAt: (summary as any).lastActivityAt ? String((summary as any).lastActivityAt) : null,
+        lastActivityAt: (summary as any).lastActivityAt
+          ? String((summary as any).lastActivityAt)
+          : null,
       };
     }
   } catch (err: unknown) {
-    if (err && typeof err === "object" && "message" in err && typeof (err as any).message === "string") {
+    if (
+      err &&
+      typeof err === "object" &&
+      "message" in err &&
+      typeof (err as any).message === "string"
+    ) {
       errorMessage = (err as any).message;
     } else if (typeof err === "string") {
       errorMessage = err;
@@ -164,7 +171,9 @@ export default async function DashboardPage() {
 
         <Card className="md:col-span-3">
           <h3 className="text-sm font-medium text-gray-500 mb-2">Last Activity</h3>
-          <p className="text-lg font-semibold text-gray-900">{formatDate(summary.lastActivityAt)}</p>
+          <p className="text-lg font-semibold text-gray-900">
+            {formatDate(summary.lastActivityAt)}
+          </p>
         </Card>
       </div>
     </div>
