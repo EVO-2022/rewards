@@ -22,11 +22,22 @@ const clerkClient = createClerkClient({
 export const authenticate = async (req: any, res: Response, next: NextFunction) => {
   // Development mode: bypass auth and ensure dev user exists
   if (process.env.NODE_ENV === "development") {
+    // Use DEV_AUTH_USER_ID if set, otherwise fallback to "dev-user-id"
+    const devUserId = process.env.DEV_AUTH_USER_ID || "dev-user-id";
+    
+    console.log("[authenticate] Dev mode - using userId:", devUserId);
+    
     let user = await prisma.user.findUnique({
-      where: { id: "dev-user-id" },
+      where: { id: devUserId },
     });
 
     if (!user) {
+      // If using custom DEV_AUTH_USER_ID, it must exist in DB
+      if (process.env.DEV_AUTH_USER_ID) {
+        console.error(`[authenticate] DEV_AUTH_USER_ID=${devUserId} specified but user not found in database`);
+        throw new Error(`DEV_AUTH_USER_ID=${devUserId} specified but user not found in database. Please create this user first.`);
+      }
+      // Fallback: create default dev user
       user = await prisma.user.create({
         data: {
           id: "dev-user-id",
@@ -35,6 +46,9 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
           isPlatformAdmin: true,
         },
       });
+      console.log("[authenticate] Created default dev user:", user.id);
+    } else {
+      console.log("[authenticate] Found user:", { id: user.id, email: user.email, clerkId: user.clerkId });
     }
 
     // Attach user to request
@@ -44,6 +58,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
       email: user.email || undefined,
       phone: user.phone || undefined,
     };
+    console.log("[authenticate] Set req.auth.userId to:", req.auth.userId);
     return next();
   }
 
@@ -166,11 +181,20 @@ export const syncUser = async (req: any, res: Response, next: NextFunction) => {
   try {
     // DEV MODE: Ensure dev user exists in DB and move on
     if (process.env.NODE_ENV === "development") {
+      // Use DEV_AUTH_USER_ID if set, otherwise fallback to "dev-user-id"
+      const devUserId = process.env.DEV_AUTH_USER_ID || "dev-user-id";
+      
       let user = await prisma.user.findUnique({
-        where: { id: "dev-user-id" },
+        where: { id: devUserId },
       });
 
       if (!user) {
+        // If using custom DEV_AUTH_USER_ID, it must exist in DB
+        if (process.env.DEV_AUTH_USER_ID) {
+          console.error(`[syncUser] DEV_AUTH_USER_ID=${devUserId} specified but user not found in database`);
+          throw new Error(`DEV_AUTH_USER_ID=${devUserId} specified but user not found in database. Please create this user first.`);
+        }
+        // Fallback: create default dev user
         user = await prisma.user.create({
           data: {
             id: "dev-user-id",
@@ -179,9 +203,17 @@ export const syncUser = async (req: any, res: Response, next: NextFunction) => {
             isPlatformAdmin: true,
           },
         });
+        console.log("[syncUser] Created default dev user:", user.id);
+      } else {
+        console.log("[syncUser] Found user:", { id: user.id, email: user.email });
       }
 
+      // Ensure req.auth exists
+      if (!req.auth) {
+        req.auth = {};
+      }
       req.auth.userId = user.id;
+      console.log("[syncUser] Set req.auth.userId to:", req.auth.userId);
       return next();
     }
 
@@ -250,21 +282,23 @@ export const syncUser = async (req: any, res: Response, next: NextFunction) => {
 export const requireBrandAccess = (requiredRole?: BrandRole) => {
   return async (req: any, res: Response, next: NextFunction) => {
     try {
-      // Development mode: bypass brand access checks
-      if (process.env.NODE_ENV === "development") {
-        req.brandId = req.params.brandId || req.body.brandId || req.query.brandId || "dev-brand-id";
-        req.userRole = "OWNER";
-        return next();
-      }
-
-      // Production mode: enforce brand access
-
       const userId = req.auth?.userId;
       const brandId = req.params.brandId || req.body.brandId || req.query.brandId;
+      
+      // Debug logging (dev mode or temporary)
+      if (process.env.NODE_ENV === "development") {
+        console.log("[requireBrandAccess]", {
+          nodeEnv: process.env.NODE_ENV,
+          authUserId: req.auth?.userId,
+          brandId: brandId,
+        });
+      }
 
+      // Validate inputs (both dev and production)
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       if (!brandId) return res.status(400).json({ error: "Brand ID is required" });
 
+      // Check BrandMember in database (both dev and production now)
       const membership = await prisma.brandMember.findUnique({
         where: {
           userId_brandId: {
@@ -275,9 +309,15 @@ export const requireBrandAccess = (requiredRole?: BrandRole) => {
       });
 
       if (!membership) {
+        console.error("[requireBrandAccess] No membership found", {
+          userId,
+          brandId,
+          nodeEnv: process.env.NODE_ENV,
+        });
         return res.status(403).json({ error: "Access denied to this brand" });
       }
 
+      // Check role requirements
       if (requiredRole) {
         const roleHierarchy: Record<BrandRole, number> = {
           OWNER: 3,
@@ -286,6 +326,13 @@ export const requireBrandAccess = (requiredRole?: BrandRole) => {
         };
 
         if (roleHierarchy[membership.role] < roleHierarchy[requiredRole]) {
+          console.error("[requireBrandAccess] Insufficient role", {
+            userId,
+            brandId,
+            userRole: membership.role,
+            requiredRole,
+            nodeEnv: process.env.NODE_ENV,
+          });
           return res.status(403).json({ error: "Insufficient permissions" });
         }
       }

@@ -9,6 +9,9 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log("📊 REAL NODE_ENV =", process.env.NODE_ENV);
+  if (process.env.NODE_ENV === "development") {
+    console.log(`🔧 Dev mode: DEV_AUTH_USER_ID=${process.env.DEV_AUTH_USER_ID || "not set (using dev-user-id)"}`);
+  }
 });
 
 // Graceful shutdown

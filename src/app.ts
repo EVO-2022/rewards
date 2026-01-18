@@ -11,6 +11,7 @@ import apiKeyRoutes from "./routes/apiKeyRoutes";
 import integrationRoutes from "./routes/integrationRoutes";
 import redemptionRoutes from "./routes/redemptionRoutes";
 import testWebhookRoutes from "./routes/testWebhookRoutes";
+import portalRoutes from "./routes/portalRoutes";
 import * as brandController from "./controllers/brandController";
 import * as pointsController from "./controllers/pointsController";
 import * as redemptionController from "./controllers/redemptionController";
@@ -279,7 +280,8 @@ export function createApp() {
   app.use("/api/brands", apiKeyRoutes);
   app.use("/api/brands", webhookRoutes);
   app.use("/api/brands", redemptionRoutes);
-  app.use("/api", pointsRoutes);
+  app.use("/api/brands", pointsRoutes);
+  app.use("/api/portal", portalRoutes);
   // Note: /api/integration is mounted earlier, before auth middleware
 
   // Test webhook receiver (guarded by SMOKE_TEST_BYPASS)

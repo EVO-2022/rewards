@@ -52,6 +52,8 @@ export const createRedemption = async (req: Request, res: Response) => {
         {
           redemptionId: redemption.id,
           campaignId: data.campaignId,
+          source: "admin_redemption",
+          actorUserId: req.auth?.userId || null,
         },
         tx
       );
@@ -215,9 +217,9 @@ export const cancelRedemption = async (req: Request, res: Response) => {
         throw err;
       }
 
-      if (redemption.status !== "pending") {
-        const err: any = new Error("NOT_PENDING");
-        err.code = "NOT_PENDING";
+      if (redemption.status === "cancelled") {
+        const err: any = new Error("ALREADY_CANCELLED");
+        err.code = "ALREADY_CANCELLED";
         throw err;
       }
 
@@ -227,7 +229,11 @@ export const cancelRedemption = async (req: Request, res: Response) => {
         redemption.userId,
         redemption.pointsUsed.toNumber(),
         "redemption_refund",
-        { originalRedemptionId: redemption.id },
+        {
+          originalRedemptionId: redemption.id,
+          source: "admin_redemption_refund",
+          actorUserId: req.auth?.userId || null,
+        },
         tx
       );
 
