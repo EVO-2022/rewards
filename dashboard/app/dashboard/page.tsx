@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { CreateBrandForm } from "@/components/CreateBrandForm";
 import { getFirstBrand } from "@/lib/brandHelper";
 import { adminApiFetch } from "@/lib/server/rewardsApi";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,21 @@ export default async function DashboardPage() {
   let summary: BrandSummary | null = null;
 
   try {
-    brand = await getFirstBrand();
+    // Get all user's brands to check roles
+    const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
+    const userBrands = Array.isArray(brands) ? brands : [];
+    
+    // Check if user only has VIEWER role (customer, not admin)
+    const hasAdminRole = userBrands.some((b: any) => 
+      b.role === "OWNER" || b.role === "MANAGER"
+    );
+    
+    // If user only has VIEWER role, redirect to portal
+    if (userBrands.length > 0 && !hasAdminRole) {
+      redirect("/portal");
+    }
+    
+    brand = userBrands.length > 0 ? userBrands[0] : null;
 
     if (!brand) {
       return (
