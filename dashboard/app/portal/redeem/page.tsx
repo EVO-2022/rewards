@@ -210,11 +210,11 @@ function RedeemPageContent() {
             const isRedeeming = redeeming === item.id;
 
             return (
-              <div key={item.id} className="bg-gray-800 rounded-lg shadow p-6">
-                <h3 className="text-xl font-medium mb-2">{item.title}</h3>
+              <div key={item.id} className="bg-gray-800 rounded-lg shadow border border-gray-700 p-6">
+                <h3 className="text-xl font-medium mb-2 text-gray-100">{item.title}</h3>
                 <p className="text-gray-300 mb-4">{item.description}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-medium text-blue-600">{item.pointsCost} points</span>
+                  <span className="text-lg font-medium text-blue-400">{item.pointsCost} points</span>
                   <button
                     onClick={() => handleRedeem(item)}
                     disabled={!canAfford || isRedeeming}
@@ -228,7 +228,7 @@ function RedeemPageContent() {
                   </button>
                 </div>
                 {!canAfford && balance !== null && (
-                  <p className="text-sm text-red-600 mt-2">
+                  <p className="text-sm text-red-400 mt-2">
                     Need {item.pointsCost - balance} more points
                   </p>
                 )}
