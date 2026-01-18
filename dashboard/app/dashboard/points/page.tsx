@@ -30,8 +30,8 @@ export default async function IssuePointsPage() {
         <PageHeader title="Issue Points" />
         <Card>
           <div className="p-6">
-            <h1 className="text-xl font-semibold text-red-600 mb-2">Error Loading Page</h1>
-            <p className="text-gray-700">{errorMessage}</p>
+            <h1 className="text-xl font-medium text-red-600 mb-2">Error Loading Page</h1>
+            <p className="text-gray-300">{errorMessage}</p>
           </div>
         </Card>
       </div>
@@ -44,8 +44,8 @@ export default async function IssuePointsPage() {
         <PageHeader title="Issue Points" />
         <Card>
           <div className="text-center py-12">
-            <p className="text-lg font-medium text-gray-900 mb-2">You don&apos;t have any brands yet.</p>
-            <p className="text-gray-600">Brand creation UI will go here.</p>
+            <p className="text-lg font-medium text-gray-100 mb-2">You don&apos;t have any brands yet.</p>
+            <p className="text-gray-300">Brand creation UI will go here.</p>
           </div>
         </Card>
       </div>

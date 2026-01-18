@@ -72,7 +72,7 @@ export function IssuePointsForm({ brandId }: IssuePointsFormProps) {
     <Card>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="externalUserId" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="externalUserId" className="block text-sm font-medium text-gray-300 mb-2">
             External User ID *
           </label>
           <input
@@ -82,7 +82,7 @@ export function IssuePointsForm({ brandId }: IssuePointsFormProps) {
             onChange={(e) => setExternalUserId(e.target.value)}
             placeholder="e.g., user-123"
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <p className="mt-1 text-xs text-gray-500">
             The user identifier from your system (not the internal user ID)
@@ -90,7 +90,7 @@ export function IssuePointsForm({ brandId }: IssuePointsFormProps) {
         </div>
 
         <div>
-          <label htmlFor="points" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="points" className="block text-sm font-medium text-gray-300 mb-2">
             Points *
           </label>
           <input
@@ -101,12 +101,12 @@ export function IssuePointsForm({ brandId }: IssuePointsFormProps) {
             placeholder="e.g., 100"
             required
             min="1"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 
         <div>
-          <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="reason" className="block text-sm font-medium text-gray-300 mb-2">
             Reason (optional)
           </label>
           <input
@@ -115,7 +115,7 @@ export function IssuePointsForm({ brandId }: IssuePointsFormProps) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g., Purchase reward, Referral bonus"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 

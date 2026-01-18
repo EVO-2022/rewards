@@ -155,9 +155,9 @@ function RedeemPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gray-900 p-8">
         <div className="max-w-4xl mx-auto">
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-300">Loading...</p>
         </div>
       </div>
     );
@@ -165,10 +165,10 @@ function RedeemPageContent() {
 
   if (!brandId) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gray-900 p-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4">Redeem Points</h1>
-          <p className="text-gray-600">No brand found. Please contact support.</p>
+          <h1 className="text-2xl font-medium mb-4">Redeem Points</h1>
+          <p className="text-gray-300">No brand found. Please contact support.</p>
           <Link href="/portal" className="text-blue-600 hover:underline mt-4 inline-block">
             ← Back to Portal
           </Link>
@@ -178,16 +178,16 @@ function RedeemPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-900 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <Link href="/portal" className="text-blue-600 hover:underline mb-4 inline-block">
             ← Back to Portal
           </Link>
-          <h1 className="text-2xl font-bold mb-2">Redeem Points</h1>
+          <h1 className="text-2xl font-medium mb-2">Redeem Points</h1>
           {balance !== null && (
-            <p className="text-gray-600">
-              Your balance: <span className="font-semibold">{balance} points</span>
+            <p className="text-gray-300">
+              Your balance: <span className="font-medium">{balance} points</span>
             </p>
           )}
         </div>
@@ -195,7 +195,9 @@ function RedeemPageContent() {
         {message && (
           <div
             className={`mb-6 p-4 rounded-lg ${
-              message.type === "success" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
+              message.type === "success"
+                ? "bg-green-900/30 text-green-300 border border-green-700"
+                : "bg-red-900/30 text-red-300 border border-red-700"
             }`}
           >
             {message.text}
@@ -208,18 +210,18 @@ function RedeemPageContent() {
             const isRedeeming = redeeming === item.id;
 
             return (
-              <div key={item.id} className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-gray-600 mb-4">{item.description}</p>
+              <div key={item.id} className="bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-xl font-medium mb-2">{item.title}</h3>
+                <p className="text-gray-300 mb-4">{item.description}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-blue-600">{item.pointsCost} points</span>
+                  <span className="text-lg font-medium text-blue-600">{item.pointsCost} points</span>
                   <button
                     onClick={() => handleRedeem(item)}
                     disabled={!canAfford || isRedeeming}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                       canAfford && !isRedeeming
                         ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-gray-700 text-gray-500 cursor-not-allowed"
                     }`}
                   >
                     {isRedeeming ? "Redeeming..." : "Redeem"}
@@ -243,9 +245,9 @@ export default function RedeemPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-50 p-8">
+        <div className="min-h-screen bg-gray-900 p-8">
           <div className="max-w-4xl mx-auto">
-            <p className="text-gray-600">Loading...</p>
+            <p className="text-gray-300">Loading...</p>
           </div>
         </div>
       }

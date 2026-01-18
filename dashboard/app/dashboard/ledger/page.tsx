@@ -68,7 +68,7 @@ export default async function LedgerPage({
           <PageHeader title="Ledger" />
           <Card>
             <div className="text-center py-12">
-              <p className="text-lg font-medium text-gray-900 mb-2">
+              <p className="text-lg font-medium text-gray-100 mb-2">
                 No accessible brands for this user.
               </p>
             </div>
@@ -117,8 +117,8 @@ export default async function LedgerPage({
         <PageHeader title="Ledger" />
         <Card>
           <div className="p-6">
-            <h1 className="text-xl font-semibold text-red-600 mb-2">Error Loading Ledger</h1>
-            <p className="text-gray-700">{errorMessage}</p>
+            <h1 className="text-xl font-medium text-red-600 mb-2">Error Loading Ledger</h1>
+            <p className="text-gray-300">{errorMessage}</p>
           </div>
         </Card>
       </div>
@@ -130,7 +130,7 @@ export default async function LedgerPage({
       <div>
         <PageHeader title="Ledger" />
         <Card>
-          <p className="text-gray-600">Failed to load brand information.</p>
+          <p className="text-gray-300">Failed to load brand information.</p>
         </Card>
       </div>
     );
@@ -142,8 +142,8 @@ export default async function LedgerPage({
   if (!items.length) {
     return (
       <div className="p-6">
-        <h1 className="text-xl font-semibold">Ledger</h1>
-        <p className="mt-2 text-sm text-gray-600">No ledger activity yet.</p>
+        <h1 className="text-xl font-medium">Ledger</h1>
+        <p className="mt-2 text-sm text-gray-300">No ledger activity yet.</p>
       </div>
     );
   }
@@ -154,17 +154,17 @@ export default async function LedgerPage({
 
       <Card>
         {/* Filters */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="mb-6 p-4 bg-gray-900 rounded-lg">
           <form method="get" className="flex gap-4 flex-wrap items-end">
             <div className="flex-1 min-w-[200px]">
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="type" className="block text-sm font-medium text-gray-300 mb-1">
                 Type
               </label>
               <select
                 id="type"
                 name="type"
                 defaultValue={type}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">All Types</option>
                 <option value="ISSUE">Issue</option>
@@ -175,7 +175,7 @@ export default async function LedgerPage({
               </select>
             </div>
             <div className="flex-1 min-w-[200px]">
-              <label htmlFor="q" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="q" className="block text-sm font-medium text-gray-300 mb-1">
                 Search (User ID/Email)
               </label>
               <input
@@ -184,7 +184,7 @@ export default async function LedgerPage({
                 name="q"
                 defaultValue={query}
                 placeholder="Search..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <button
@@ -196,7 +196,7 @@ export default async function LedgerPage({
             {(type || query) && (
               <a
                 href="/dashboard/ledger"
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 bg-gray-200 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Clear
               </a>
@@ -207,8 +207,8 @@ export default async function LedgerPage({
         {/* Table */}
         {!ledgerData || ledgerData.items.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-lg font-medium text-gray-900 mb-2">No ledger entries found.</p>
-            <p className="text-gray-600">
+            <p className="text-lg font-medium text-gray-100 mb-2">No ledger entries found.</p>
+            <p className="text-gray-300">
               {ledgerData
                 ? "Try adjusting your filters or check back later."
                 : "Ledger data will appear here once points transactions occur."}
@@ -217,14 +217,14 @@ export default async function LedgerPage({
         ) : (
           <>
             <div className="mb-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-300">
                 Showing {ledgerData.items.length} of {ledgerData.total} entries
                 {ledgerData.hasMore && " (more available)"}
               </p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-900">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date
@@ -246,7 +246,7 @@ export default async function LedgerPage({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-gray-800 divide-y divide-gray-700">
                   {ledgerData.items.map((entry) => (
                     <tr key={entry.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -254,22 +254,22 @@ export default async function LedgerPage({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          className={`px-2 inline-flex text-xs leading-5 font-medium rounded-full ${
                             entry.type === "MINT"
                               ? "bg-green-100 text-green-800"
                               : entry.type === "BURN"
                               ? "bg-red-100 text-red-800"
-                              : "bg-gray-100 text-gray-800"
+                              : "bg-gray-800 text-gray-800"
                           }`}
                         >
                           {entry.type}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
                         {entry.type === "MINT" ? "+" : "-"}
                         {entry.amount}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-100">
                         {entry.userId}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">{entry.reason || "—"}</td>

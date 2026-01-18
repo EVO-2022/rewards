@@ -24,16 +24,16 @@ export function CopyField({ label, value, mono = false }: CopyFieldProps) {
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <label className="block text-sm font-medium text-gray-300">{label}</label>
       <div className="flex items-center gap-2">
         <div
           className={clsx(
-            "flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm",
+            "flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm",
             "overflow-x-auto",
             mono && "font-mono"
           )}
         >
-          <code className="text-gray-900">{value}</code>
+          <code className="text-gray-100">{value}</code>
         </div>
         <button
           type="button"
@@ -42,7 +42,7 @@ export function CopyField({ label, value, mono = false }: CopyFieldProps) {
             "px-4 py-2 text-sm font-medium rounded-md border transition-colors",
             copied
               ? "bg-green-50 text-green-700 border-green-300"
-              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              : "bg-gray-800 text-gray-300 border-gray-600 hover:bg-gray-900"
           )}
         >
           {copied ? "Copied!" : "Copy"}

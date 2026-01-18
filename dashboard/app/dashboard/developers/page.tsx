@@ -39,10 +39,10 @@ export default async function DevelopersPage() {
           <PageHeader title="Developers" />
           <Card>
             <div className="text-center py-12">
-              <p className="text-lg font-medium text-gray-900 mb-2">
+              <p className="text-lg font-medium text-gray-100 mb-2">
                 You don&apos;t have any brands yet.
               </p>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-300 mb-4">
                 Create your first brand to see integration details and API keys here.
               </p>
               <Link
@@ -109,10 +109,10 @@ export default async function DevelopersPage() {
         <PageHeader title="Developers" />
         <Card>
           <div className="p-6">
-            <h1 className="text-xl font-semibold text-red-600 mb-2">
+            <h1 className="text-xl font-medium text-red-600 mb-2">
               Error Loading Developer Data
             </h1>
-            <p className="text-gray-700">{errorMessage}</p>
+            <p className="text-gray-300">{errorMessage}</p>
             <p className="mt-4 text-sm text-gray-500">Please try again later.</p>
           </div>
         </Card>
@@ -125,7 +125,7 @@ export default async function DevelopersPage() {
       <div>
         <PageHeader title="Developers" />
         <Card>
-          <p className="text-gray-600">Failed to load brand information.</p>
+          <p className="text-gray-300">Failed to load brand information.</p>
         </Card>
       </div>
     );
@@ -202,11 +202,11 @@ issuePoints();`;
 
       {/* Brand Details Section */}
       <Card className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Brand Details</h2>
+        <h2 className="text-xl font-medium text-gray-100 mb-4">Brand Details</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Brand Name</label>
-            <p className="text-gray-900">{brand.name}</p>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Brand Name</label>
+            <p className="text-gray-100">{brand.name}</p>
           </div>
           <CopyField label="Brand ID" value={brand.id} mono={true} />
           <div>
@@ -225,10 +225,10 @@ issuePoints();`;
 
       {/* API Keys Section */}
       <Card className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">API Keys</h2>
+        <h2 className="text-xl font-medium text-gray-100 mb-4">API Keys</h2>
         {apiKeys.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-600 mb-4">No API keys found for this brand.</p>
+            <p className="text-gray-300 mb-4">No API keys found for this brand.</p>
             <Link
               href="/dashboard/api-keys"
               className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -239,8 +239,8 @@ issuePoints();`;
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-900">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Name
@@ -256,10 +256,10 @@ issuePoints();`;
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-gray-800 divide-y divide-gray-700">
                   {apiKeys.map((key) => (
                     <tr key={key.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
                         {key.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -270,10 +270,10 @@ issuePoints();`;
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          className={`px-2 inline-flex text-xs leading-5 font-medium rounded-full ${
                             key.isActive
                               ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
+                              : "bg-gray-800 text-gray-800"
                           }`}
                         >
                           {key.isActive ? "Active" : "Inactive"}
@@ -297,12 +297,12 @@ issuePoints();`;
 
       {/* Integration Examples Section */}
       <Card>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Integration Examples</h2>
+        <h2 className="text-xl font-medium text-gray-100 mb-4">Quick Integration Examples</h2>
 
         <div className="space-y-6">
           {/* cURL Examples */}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">cURL Examples</h3>
+            <h3 className="text-lg font-medium text-gray-100 mb-3">cURL Examples</h3>
             <div className="space-y-4">
               <CopyField label="Whoami" value={curlWhoami} mono={true} />
               <CopyField label="Issue Points" value={curlIssuePoints} mono={true} />
@@ -313,7 +313,7 @@ issuePoints();`;
 
           {/* Node.js Example */}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Node.js Example</h3>
+            <h3 className="text-lg font-medium text-gray-100 mb-3">Node.js Example</h3>
             <CopyField label="Node.js: Issue Points" value={nodeExample} mono={true} />
           </div>
         </div>
