@@ -56,7 +56,7 @@ export function ApiKeysTable({ brandId, initialKeys }: ApiKeysTableProps) {
             <div>
               <h3 className="text-lg font-semibold text-yellow-900 mb-2">API Key Created</h3>
               <p className="text-sm text-yellow-800 mb-4">
-                Copy this key now. You won't be able to see it again.
+                Copy this key now. You won&apos;t be able to see it again.
               </p>
               <div className="bg-white p-4 rounded border border-yellow-300">
                 <code className="text-sm font-mono break-all">{newKey.apiKey}</code>

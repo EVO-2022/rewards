@@ -40,7 +40,7 @@ export default async function DevelopersPage() {
           <Card>
             <div className="text-center py-12">
               <p className="text-lg font-medium text-gray-900 mb-2">
-                You don't have any brands yet.
+                You don&apos;t have any brands yet.
               </p>
               <p className="text-gray-600 mb-4">
                 Create your first brand to see integration details and API keys here.

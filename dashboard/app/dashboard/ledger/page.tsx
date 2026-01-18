@@ -137,7 +137,7 @@ export default async function LedgerPage({
   }
 
   const items = (ledgerData as any)?.items ?? [];
-  const total = (ledgerData as any)?.total ?? items.length;
+  const _total = (ledgerData as any)?.total ?? items.length;
 
   if (!items.length) {
     return (

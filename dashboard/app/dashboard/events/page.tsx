@@ -23,7 +23,7 @@ export default async function EventsPage() {
           <Card>
             <div className="text-center py-12">
               <p className="text-lg font-medium text-gray-900 mb-2">
-                You don't have any brands yet.
+                You don&apos;t have any brands yet.
               </p>
               <p className="text-gray-600">Brand creation UI will go here.</p>
             </div>
@@ -108,7 +108,7 @@ export default async function EventsPage() {
           <div className="text-center py-12">
             <p className="text-lg font-medium text-gray-900 mb-2">No events received yet.</p>
             <p className="text-gray-600">
-              Once your app sends events to the integration endpoint, they'll show up here.
+              Once your app sends events to the integration endpoint, they&apos;ll show up here.
             </p>
           </div>
         ) : (
