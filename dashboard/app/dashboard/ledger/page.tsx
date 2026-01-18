@@ -255,16 +255,18 @@ export default async function LedgerPage({
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            entry.type === "MINT" || entry.type === "ISSUE"
+                            entry.type === "MINT"
                               ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
+                              : entry.type === "BURN"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-gray-100 text-gray-800"
                           }`}
                         >
                           {entry.type}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {entry.type === "MINT" || entry.type === "ISSUE" ? "+" : "-"}
+                        {entry.type === "MINT" ? "+" : "-"}
                         {entry.amount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
