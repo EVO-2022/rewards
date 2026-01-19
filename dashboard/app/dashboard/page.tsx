@@ -20,12 +20,8 @@ function formatDate(dateString: string | null): string {
 }
 
 export default async function DashboardPage() {
-  let brand: Brand | null = null;
-  let errorMessage: string | null = null;
-  let summary: BrandSummary | null = null;
-
+  // IMMEDIATELY check role and redirect VIEWER users before any other logic
   try {
-    // Get all user's brands to check roles
     const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
     const userBrands = Array.isArray(brands) ? brands : [];
     
@@ -34,10 +30,23 @@ export default async function DashboardPage() {
       b.role === "OWNER" || b.role === "MANAGER"
     );
     
-    // If user only has VIEWER role, redirect to portal
+    // If user only has VIEWER role, redirect to portal IMMEDIATELY
     if (userBrands.length > 0 && !hasAdminRole) {
       redirect("/portal");
     }
+  } catch (error) {
+    // If API call fails, continue (might be network issue, but don't block)
+    console.error("Error checking user role in dashboard:", error);
+  }
+
+  let brand: Brand | null = null;
+  let errorMessage: string | null = null;
+  let summary: BrandSummary | null = null;
+
+  try {
+    // Get all user's brands to check roles
+    const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
+    const userBrands = Array.isArray(brands) ? brands : [];
     
     brand = userBrands.length > 0 ? userBrands[0] : null;
 

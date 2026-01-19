@@ -61,30 +61,52 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
       
       if (token) {
         const apiUrl = process.env.NEXT_PUBLIC_REWARDS_API_URL || "http://localhost:3000/api";
-        const response = await fetch(`${apiUrl}/brands/mine`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: "no-store",
-        });
+        
+        // Make API call with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+        
+        try {
+          const response = await fetch(`${apiUrl}/brands/mine`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            cache: "no-store",
+            signal: controller.signal,
+          });
 
-        if (response.ok) {
-          const brands = await response.json();
-          const userBrands = Array.isArray(brands) ? brands : [];
-          const hasAdminRole = userBrands.some((b: any) => 
-            b.role === "OWNER" || b.role === "MANAGER"
-          );
+          clearTimeout(timeoutId);
 
-          // If user is VIEWER, redirect to portal
-          if (!hasAdminRole && userBrands.length > 0) {
-            const redirectUrl = new URL("/portal", req.url);
-            return NextResponse.redirect(redirectUrl);
+          if (response.ok) {
+            const brands = await response.json();
+            const userBrands = Array.isArray(brands) ? brands : [];
+            const hasAdminRole = userBrands.some((b: any) => 
+              b.role === "OWNER" || b.role === "MANAGER"
+            );
+
+            // If user is VIEWER, redirect to portal
+            if (!hasAdminRole && userBrands.length > 0) {
+              const redirectUrl = new URL("/portal", req.url);
+              return NextResponse.redirect(redirectUrl);
+            }
+          } else {
+            // If API call fails, let the request through (page will handle it)
+            console.warn(`[middleware] API call failed: ${response.status} ${response.statusText}`);
+          }
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          if (fetchError.name === 'AbortError') {
+            console.warn("[middleware] API call timed out, letting page handle redirect");
+          } else {
+            console.error("[middleware] API call error:", fetchError.message);
           }
         }
+      } else {
+        console.warn("[middleware] No token available, letting page handle redirect");
       }
     } catch (error) {
       // If API call fails, let the request through (page will handle it)
-      console.error("Error checking user role in middleware:", error);
+      console.error("[middleware] Error checking user role:", error);
     }
   }
 
