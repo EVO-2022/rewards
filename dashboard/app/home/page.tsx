@@ -12,11 +12,17 @@ export default async function HomePage() {
   try {
     const brandsData = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
     brands = Array.isArray(brandsData) ? brandsData : [];
+    
+    // Debug: log if brands is empty (shouldn't be empty if user has brands)
+    if (brands.length === 0) {
+      console.log("[HomePage] No brands returned from API");
+    }
   } catch (error: unknown) {
+    console.error("[HomePage] Error fetching brands:", error);
     if (error && typeof error === "object" && "message" in error) {
       errorMessage = String(error.message);
     } else {
-      errorMessage = "Failed to load your information";
+      errorMessage = "Failed to load your information. Please try refreshing the page.";
     }
   }
 
@@ -26,8 +32,11 @@ export default async function HomePage() {
         <PageHeader title="Home" />
         <Card>
           <div className="p-6">
-            <h1 className="text-xl font-medium text-red-600 mb-2">Error</h1>
-            <p className="text-gray-300">{errorMessage}</p>
+            <h1 className="text-xl font-medium text-red-600 mb-2">Error Loading Brands</h1>
+            <p className="text-gray-300 mb-4">{errorMessage}</p>
+            <p className="text-sm text-gray-400">
+              If you believe you should have access to brands, please contact support or try refreshing the page.
+            </p>
           </div>
         </Card>
       </div>
