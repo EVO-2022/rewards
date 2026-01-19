@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { adminApiFetch } from "@/lib/server/rewardsApi";
 import { Brand } from "@/lib/types";
 import { ViewerRedirect } from "@/components/ViewerRedirect";
+import { DashboardSidebar } from "@/components/DashboardSidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,14 @@ export default async function DashboardLayout({
   return (
     <>
       <ViewerRedirect />
-      {children}
+      <div className="flex">
+        <DashboardSidebar />
+        <main className="flex-1 md:ml-64">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {children}
+          </div>
+        </main>
+      </div>
     </>
   );
 }
