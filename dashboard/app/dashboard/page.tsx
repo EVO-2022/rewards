@@ -2,7 +2,6 @@ import { BrandSummary, Brand } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { CreateBrandForm } from "@/components/CreateBrandForm";
-import { getFirstBrand } from "@/lib/brandHelper";
 import { adminApiFetch } from "@/lib/server/rewardsApi";
 import { redirect } from "next/navigation";
 
