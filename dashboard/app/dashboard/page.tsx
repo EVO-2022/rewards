@@ -5,6 +5,7 @@ import { CreateBrandForm } from "@/components/CreateBrandForm";
 import { ViewerRedirect } from "@/components/ViewerRedirect";
 import { adminApiFetch } from "@/lib/server/rewardsApi";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,34 @@ function formatDate(dateString: string | null): string {
 }
 
 export default async function DashboardPage() {
+  // CRITICAL: Check role FIRST before any other logic
+  // Use headers() to ensure this runs on every request
+  headers();
+  
+  try {
+    const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
+    const userBrands = Array.isArray(brands) ? brands : [];
+    
+    if (userBrands.length > 0) {
+      const hasAdminRole = userBrands.some((b: any) => 
+        b.role === "OWNER" || b.role === "MANAGER"
+      );
+      
+      // If user is VIEWER, redirect IMMEDIATELY - this must happen before any rendering
+      if (!hasAdminRole) {
+        // Use redirect() which throws - this prevents any further execution
+        redirect("/portal");
+      }
+    }
+  } catch (error: any) {
+    // If redirect() was called, it throws - rethrow it
+    if (error && typeof error === "object" && "digest" in error && error.digest?.includes("NEXT_REDIRECT")) {
+      throw error;
+    }
+    // If API call fails, we can't determine role, so continue (client-side will handle it)
+    console.error("Error checking user role in dashboard:", error);
+  }
+
   let brand: Brand | null = null;
   let errorMessage: string | null = null;
   let summary: BrandSummary | null = null;
@@ -29,16 +58,6 @@ export default async function DashboardPage() {
     // Get all user's brands to check roles
     const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
     const userBrands = Array.isArray(brands) ? brands : [];
-    
-    // Check if user only has VIEWER role (customer, not admin)
-    const hasAdminRole = userBrands.some((b: any) => 
-      b.role === "OWNER" || b.role === "MANAGER"
-    );
-    
-    // If user only has VIEWER role, redirect to portal IMMEDIATELY
-    if (userBrands.length > 0 && !hasAdminRole) {
-      redirect("/portal");
-    }
     
     brand = userBrands.length > 0 ? userBrands[0] : null;
 
