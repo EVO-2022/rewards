@@ -140,9 +140,10 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div>
+    <>
       <ViewerRedirect />
-      <PageHeader title={brand.name} description={`${brand.slug} • Overview`} />
+      <div>
+        <PageHeader title={brand.name} description={`${brand.slug} • Overview`} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>
@@ -192,6 +193,7 @@ export default async function DashboardPage() {
           </p>
         </Card>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

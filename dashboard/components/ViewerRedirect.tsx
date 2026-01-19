@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 /**
@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
  */
 export function ViewerRedirect() {
   const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     async function checkRole() {
@@ -24,19 +25,33 @@ export function ViewerRedirect() {
             (b: any) => b.role === "OWNER" || b.role === "MANAGER"
           );
 
-          // If user is VIEWER, redirect to portal
+          // If user is VIEWER, redirect to portal IMMEDIATELY
           if (userBrands.length > 0 && !hasAdminRole) {
-            router.replace("/portal");
+            // Use window.location for immediate redirect (no React router delay)
+            window.location.href = "/portal";
+            return;
           }
         }
       } catch (error) {
         // Silently fail - server-side redirect should handle it
         console.error("Error checking role in ViewerRedirect:", error);
+      } finally {
+        setIsChecking(false);
       }
     }
 
+    // Run immediately, don't wait for React hydration
     checkRole();
   }, [router]);
+
+  // Show nothing while checking (prevents dashboard flash)
+  if (isChecking) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="text-gray-300">Loading...</div>
+      </div>
+    );
+  }
 
   return null;
 }
