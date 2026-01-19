@@ -22,7 +22,8 @@ const updateBrandSchema = z.object({
 });
 
 // Routes that only need authentication (no brand access check)
-router.get("/mine", authenticate, brandController.getMyBrands);
+// Use adminAuth to ensure user is synced (authenticate + syncUser)
+router.get("/mine", adminAuth, brandController.getMyBrands);
 router.post("/", authenticate, validate(createBrandSchema), brandController.createBrand);
 
 // Public route (no auth required)

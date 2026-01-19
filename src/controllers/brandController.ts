@@ -173,8 +173,14 @@ export const getMyBrands = async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId;
     if (!userId) {
+      console.error("[getMyBrands] No userId in req.auth", {
+        hasAuth: !!req.auth,
+        authKeys: req.auth ? Object.keys(req.auth) : [],
+      });
       return res.status(401).json({ error: "Unauthorized" });
     }
+
+    console.log("[getMyBrands] Looking up brands for userId:", userId);
 
     const memberships = await prisma.brandMember.findMany({
       where: { userId },
@@ -196,6 +202,8 @@ export const getMyBrands = async (req: Request, res: Response) => {
       },
     });
 
+    console.log("[getMyBrands] Found", memberships.length, "memberships for userId:", userId);
+
     const brands = memberships.map((m) => ({
       id: m.brand.id,
       name: m.brand.name,
@@ -207,9 +215,10 @@ export const getMyBrands = async (req: Request, res: Response) => {
       joinedAt: m.createdAt.toISOString(),
     }));
 
+    console.log("[getMyBrands] Returning", brands.length, "brands");
     res.json(brands);
   } catch (error) {
-    console.error("Get my brands error:", error);
+    console.error("[getMyBrands] Error:", error);
     res.status(500).json({ error: "Failed to fetch brands" });
   }
 };
