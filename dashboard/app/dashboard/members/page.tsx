@@ -3,6 +3,7 @@ import { BrandMembersResponse } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { MembersTable } from "@/components/MembersTable";
+import { AddMemberForm } from "@/components/AddMemberForm";
 import { getFirstBrand } from "@/lib/brandHelper";
 
 // Force dynamic rendering since we use auth() which requires headers()
@@ -103,6 +104,7 @@ export default async function MembersPage() {
       <PageHeader title="Members" description={`Brand: ${brand.name}`} />
 
       <Card>
+        <AddMemberForm brandId={brand.id} />
         <div className="mb-4">
           <p className="text-sm text-gray-300">Total members: {membersData.total}</p>
         </div>

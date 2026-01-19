@@ -281,6 +281,7 @@ export function createApp() {
   app.use("/api/brands", webhookRoutes);
   app.use("/api/brands", redemptionRoutes);
   app.use("/api/brands", pointsRoutes);
+  app.use("/api/brands", (await import("./routes/teamRoutes")).default);
   app.use("/api/portal", portalRoutes);
   // Note: /api/integration is mounted earlier, before auth middleware
 

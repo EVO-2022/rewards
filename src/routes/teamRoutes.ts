@@ -8,8 +8,12 @@ import * as teamController from "../controllers/teamController";
 const router = Router({ mergeParams: true });
 
 const addMemberSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  clerkId: z.string().optional(),
+  email: z.string().email().optional(),
   role: z.nativeEnum(BrandRole),
+}).refine((data) => data.userId || data.clerkId || data.email, {
+  message: "Either userId, clerkId, or email must be provided",
 });
 
 const updateMemberSchema = z.object({

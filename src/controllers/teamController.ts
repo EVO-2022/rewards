@@ -4,8 +4,12 @@ import { BrandRole } from "@prisma/client";
 import { z } from "zod";
 
 const addMemberSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  clerkId: z.string().optional(),
+  email: z.string().email().optional(),
   role: z.nativeEnum(BrandRole),
+}).refine((data) => data.userId || data.clerkId || data.email, {
+  message: "Either userId, clerkId, or email must be provided",
 });
 
 const updateMemberSchema = z.object({
@@ -17,13 +21,24 @@ export const addTeamMember = async (req: Request, res: Response) => {
     const { brandId } = req.params;
     const data = addMemberSchema.parse(req.body);
 
-    // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: { id: data.userId },
-    });
+    // Find user by userId, clerkId, or email
+    let user = null;
+    if (data.userId) {
+      user = await prisma.user.findUnique({
+        where: { id: data.userId },
+      });
+    } else if (data.clerkId) {
+      user = await prisma.user.findFirst({
+        where: { clerkId: data.clerkId },
+      });
+    } else if (data.email) {
+      user = await prisma.user.findFirst({
+        where: { email: data.email },
+      });
+    }
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "User not found. Make sure the user has logged in at least once to create their account." });
     }
 
     // Check if membership already exists
