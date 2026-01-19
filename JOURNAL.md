@@ -816,3 +816,94 @@ authenticate → syncUser → requireBrandAccess(role) → controller
 
 **Note:** This work completes the functional core for ledger correctness and permissions. No UI/UX changes were made; this is purely backend hardening to ensure data integrity and proper access control.
 
+
+---
+
+### 2025-01-XX - Dashboard UI Improvements & Member Management
+
+#### Completed Work
+
+1. **Dashboard Sidebar Navigation Restored**
+   - Created `DashboardSidebar` component with navigation links
+   - Added sidebar to dashboard layout (only visible to OWNER/MANAGER users)
+   - Sidebar includes: Overview, Points, Ledger, Redemptions, Members, Events, API Keys, Developers
+   - Fixed positioning with proper spacing for main content
+   - VIEWER users are redirected to `/home` so they never see the sidebar
+   - **Files:**
+     - `dashboard/components/DashboardSidebar.tsx` (new)
+     - `dashboard/app/dashboard/layout.tsx` (updated to include sidebar)
+
+2. **Customer Portal & Home Page**
+   - Created dedicated `/home` route for customers (VIEWER role)
+   - Displays brands the user is a member of with their role
+   - Links to portal for points and redemption
+   - Dashboard layout redirects VIEWER users to `/home`
+   - **Files:**
+     - `dashboard/app/home/page.tsx` (new)
+     - `dashboard/app/dashboard/layout.tsx` (updated with redirect logic)
+
+3. **Member Management UI**
+   - Created `AddMemberForm` component for adding members to brands
+   - Form accepts Clerk User ID and role (VIEWER, MANAGER, OWNER)
+   - Only visible to MANAGER/OWNER roles
+   - Integrated into members page
+   - **Files:**
+     - `dashboard/components/AddMemberForm.tsx` (new)
+     - `dashboard/app/dashboard/members/page.tsx` (updated)
+     - `dashboard/app/api/brands/[brandId]/members/route.ts` (new - API route)
+
+4. **Backend Team Management Routes**
+   - Created `teamRoutes.ts` with full CRUD for team members
+   - Routes: POST, GET, PATCH, DELETE for `/brands/:brandId/members`
+   - Supports adding members by `userId`, `clerkId`, or `email`
+   - Protected by `adminAuth` and `requireBrandAccess("MANAGER")`
+   - **Files:**
+     - `src/routes/teamRoutes.ts` (new)
+     - `src/controllers/teamController.ts` (new)
+
+5. **Enhanced Debug Logging**
+   - Added detailed debug logging to `requireBrandAccess` middleware
+   - Logs user existence, Clerk ID, and request details when membership not found
+   - Helps diagnose authentication and authorization issues
+   - **Files:**
+     - `src/middleware/auth.ts` (updated with enhanced logging)
+
+#### Known Issues
+
+1. **"Access Denied" Error When Owner Tries to Add Members**
+   - **Status:** 🔄 IN PROGRESS - Debugging
+   - **Problem:** Owner account (with OWNER role) gets "Access denied to this brand" when trying to add members
+   - **Investigation:**
+     - Owner has OWNER role for both brands in database
+     - Enhanced debug logging added to trace userId/brandId mismatch
+     - Possible causes:
+       - `req.auth.userId` might not match owner's database user ID
+       - `brandId` parameter might be incorrect
+       - User sync might not be working properly in production
+   - **Next Steps:**
+     - Check Railway logs for `[requireBrandAccess] No membership found` entries
+     - Verify `userId` matches owner's database ID (`abac12a7-4501-4ffb-9c7f-5fadb8cd1483`)
+     - Verify `brandId` matches one of owner's brands
+     - Check if `userExists` shows `true` in logs
+   - **Files Modified:**
+     - `src/middleware/auth.ts` (added debug logging)
+
+#### Files Created
+- `dashboard/components/DashboardSidebar.tsx`
+- `dashboard/app/home/page.tsx`
+- `dashboard/components/AddMemberForm.tsx`
+- `dashboard/app/api/brands/[brandId]/members/route.ts`
+- `src/routes/teamRoutes.ts`
+- `src/controllers/teamController.ts`
+
+#### Files Modified
+- `dashboard/app/dashboard/layout.tsx` (added sidebar, redirect logic)
+- `dashboard/app/dashboard/members/page.tsx` (added AddMemberForm)
+- `src/middleware/auth.ts` (enhanced debug logging)
+- `src/app.ts` (added teamRoutes)
+
+#### Status
+✅ **DASHBOARD SIDEBAR RESTORED** - Navigation menu visible to admin users
+✅ **CUSTOMER HOME PAGE COMPLETE** - Dedicated route for VIEWER users
+✅ **MEMBER MANAGEMENT UI COMPLETE** - Form and API routes for adding members
+🔄 **AUTHORIZATION DEBUGGING** - Enhanced logging to diagnose access denied issues
