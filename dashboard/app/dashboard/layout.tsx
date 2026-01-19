@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { adminApiFetch } from "@/lib/server/rewardsApi";
 import { Brand } from "@/lib/types";
+import { ViewerRedirect } from "@/components/ViewerRedirect";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   // Check user role BEFORE rendering any dashboard content
+  let shouldRedirect = false;
+  
   try {
     const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
     const userBrands = Array.isArray(brands) ? brands : [];
@@ -26,13 +29,8 @@ export default async function DashboardLayout({
 
       // If user is VIEWER (has brands but no admin role), redirect to portal IMMEDIATELY
       if (!hasAdminRole) {
-        // redirect() throws an error - we need to let it propagate
-        redirect("/portal");
+        shouldRedirect = true;
       }
-    } else {
-      // If user has no brands, check if they're a VIEWER by checking their user record
-      // For now, if they have no brands, allow them to see the create brand form
-      // (This will be handled by the page showing the form)
     }
   } catch (error: any) {
     // If redirect() was called, it throws with NEXT_REDIRECT digest - rethrow it
@@ -46,5 +44,16 @@ export default async function DashboardLayout({
     console.error("[DashboardLayout] Error checking user role:", error);
   }
 
-  return <>{children}</>;
+  // If we determined the user should be redirected, do it now
+  if (shouldRedirect) {
+    redirect("/portal");
+  }
+
+  // Wrap children with ViewerRedirect component as backup
+  return (
+    <>
+      <ViewerRedirect />
+      {children}
+    </>
+  );
 }
