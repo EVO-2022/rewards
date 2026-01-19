@@ -1,59 +1,43 @@
-"use client";
+import { redirect } from "next/navigation";
+import { adminApiFetch } from "@/lib/server/rewardsApi";
+import { Brand } from "@/lib/types";
 
-import type { ReactNode } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+export const dynamic = "force-dynamic";
 
-const navItems = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/members", label: "Members" },
-  { href: "/dashboard/events", label: "Events" },
-  { href: "/dashboard/redemptions", label: "Redemptions" },
-  { href: "/dashboard/ledger", label: "Ledger" },
-  { href: "/dashboard/points", label: "Issue Points" },
-  { href: "/dashboard/developers", label: "Developers" },
-  { href: "/dashboard/api-keys", label: "API Keys" },
-];
+/**
+ * Dashboard layout - checks user role and redirects VIEWER users to portal
+ * This runs before any dashboard pages render
+ */
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Check user role BEFORE rendering any dashboard content
+  try {
+    const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
+    const userBrands = Array.isArray(brands) ? brands : [];
 
-function SidebarNav() {
-  const pathname = usePathname();
+    if (userBrands.length > 0) {
+      const hasAdminRole = userBrands.some(
+        (b: any) => b.role === "OWNER" || b.role === "MANAGER"
+      );
 
-  return (
-    <aside className="w-60 border-r border-slate-800 bg-slate-950/80 backdrop-blur">
-      <div className="px-4 py-3 border-b border-slate-800">
-        <span className="text-xs uppercase tracking-[0.2em] text-slate-400">Rewards Admin</span>
-      </div>
-      <nav className="flex flex-col gap-0.5 px-2 py-3 text-sm">
-        {navItems.map((item) => {
-          const active = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center rounded-md px-3 py-2 transition-colors ${
-                active
-                  ? "bg-slate-800 text-slate-50"
-                  : "text-slate-300 hover:bg-slate-900 hover:text-slate-50"
-              }`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
-  );
-}
+      // If user is VIEWER, redirect to portal IMMEDIATELY
+      // This happens at the layout level, so no dashboard pages will render
+      if (!hasAdminRole) {
+        redirect("/portal");
+      }
+    }
+  } catch (error: any) {
+    // If redirect() was called, it throws - rethrow it
+    if (error && typeof error === "object" && "digest" in error && 
+        typeof error.digest === "string" && error.digest.includes("NEXT_REDIRECT")) {
+      throw error;
+    }
+    // If API call fails, continue (client-side will handle it)
+    console.error("Error checking user role in dashboard layout:", error);
+  }
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      <div className="flex min-h-screen">
-        <SidebarNav />
-        <main className="flex-1 px-6 py-6">
-          <div className="mx-auto max-w-6xl">{children}</div>
-        </main>
-      </div>
-    </div>
-  );
+  return <>{children}</>;
 }
