@@ -2,6 +2,7 @@ import { BrandSummary, Brand } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { CreateBrandForm } from "@/components/CreateBrandForm";
+import { ViewerRedirect } from "@/components/ViewerRedirect";
 import { adminApiFetch } from "@/lib/server/rewardsApi";
 import { redirect } from "next/navigation";
 
@@ -140,6 +141,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      <ViewerRedirect />
       <PageHeader title={brand.name} description={`${brand.slug} • Overview`} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
