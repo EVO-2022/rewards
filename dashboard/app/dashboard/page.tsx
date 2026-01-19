@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { CreateBrandForm } from "@/components/CreateBrandForm";
 import { ViewerRedirect } from "@/components/ViewerRedirect";
 import { adminApiFetch } from "@/lib/server/rewardsApi";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,13 @@ export default async function DashboardPage() {
     brand = userBrands.length > 0 ? userBrands[0] : null;
 
     if (!brand) {
+      // Check if user has any brands with VIEWER role - if so, redirect to portal
+      // (This is a fallback in case layout didn't catch it)
+      const hasViewerOnly = userBrands.length > 0 && userBrands.every((b: any) => b.role === "VIEWER");
+      if (hasViewerOnly) {
+        redirect("/portal");
+      }
+      
       return (
         <div>
           <PageHeader title="Dashboard" />

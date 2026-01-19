@@ -18,25 +18,32 @@ export default async function DashboardLayout({
     const brands = await adminApiFetch<Brand[]>("/brands/mine", { method: "GET" });
     const userBrands = Array.isArray(brands) ? brands : [];
 
+    // Check if user has any brands
     if (userBrands.length > 0) {
       const hasAdminRole = userBrands.some(
         (b: any) => b.role === "OWNER" || b.role === "MANAGER"
       );
 
-      // If user is VIEWER, redirect to portal IMMEDIATELY
-      // This happens at the layout level, so no dashboard pages will render
+      // If user is VIEWER (has brands but no admin role), redirect to portal IMMEDIATELY
       if (!hasAdminRole) {
+        // redirect() throws an error - we need to let it propagate
         redirect("/portal");
       }
+    } else {
+      // If user has no brands, check if they're a VIEWER by checking their user record
+      // For now, if they have no brands, allow them to see the create brand form
+      // (This will be handled by the page showing the form)
     }
   } catch (error: any) {
-    // If redirect() was called, it throws - rethrow it
-    if (error && typeof error === "object" && "digest" in error && 
-        typeof error.digest === "string" && error.digest.includes("NEXT_REDIRECT")) {
-      throw error;
+    // If redirect() was called, it throws with NEXT_REDIRECT digest - rethrow it
+    if (error && typeof error === "object" && "digest" in error) {
+      const digest = String(error.digest || "");
+      if (digest.includes("NEXT_REDIRECT")) {
+        throw error; // Re-throw redirect errors
+      }
     }
-    // If API call fails, continue (client-side will handle it)
-    console.error("Error checking user role in dashboard layout:", error);
+    // If API call fails, log but continue (client-side ViewerRedirect will handle it)
+    console.error("[DashboardLayout] Error checking user role:", error);
   }
 
   return <>{children}</>;
