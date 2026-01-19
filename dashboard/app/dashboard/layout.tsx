@@ -27,7 +27,7 @@ export default async function DashboardLayout({
         (b: any) => b.role === "OWNER" || b.role === "MANAGER"
       );
 
-      // If user is VIEWER (has brands but no admin role), redirect to portal IMMEDIATELY
+      // If user is VIEWER (has brands but no admin role), redirect to /home IMMEDIATELY
       if (!hasAdminRole) {
         shouldRedirect = true;
       }
@@ -46,7 +46,7 @@ export default async function DashboardLayout({
 
   // If we determined the user should be redirected, do it now
   if (shouldRedirect) {
-    redirect("/portal");
+    redirect("/home");
   }
 
   // Wrap children with ViewerRedirect component as backup
