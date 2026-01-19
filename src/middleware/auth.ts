@@ -314,13 +314,23 @@ export const requireBrandAccess = (requiredRole?: BrandRole) => {
           where: { id: brandId as string },
         });
         
+        // Debug: Check if user exists and what their Clerk ID is
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, clerkId: true, email: true },
+        });
+        
         console.error("[requireBrandAccess] No membership found", {
           userId,
           brandId,
           brandExists: !!brandExists,
+          userExists: !!user,
+          userClerkId: user?.clerkId,
+          userEmail: user?.email,
           nodeEnv: process.env.NODE_ENV,
           path: req.path,
           method: req.method,
+          reqAuth: req.auth ? { userId: req.auth.userId, clerkId: req.auth.clerkId } : null,
         });
         
         if (!brandExists) {
