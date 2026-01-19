@@ -45,7 +45,7 @@ export const addTeamMember = async (req: Request, res: Response) => {
     const existing = await prisma.brandMember.findUnique({
       where: {
         userId_brandId: {
-          userId: data.userId,
+          userId: user.id,
           brandId,
         },
       },
@@ -57,7 +57,7 @@ export const addTeamMember = async (req: Request, res: Response) => {
 
     const membership = await prisma.brandMember.create({
       data: {
-        userId: data.userId,
+        userId: user.id,
         brandId,
         role: data.role,
       },

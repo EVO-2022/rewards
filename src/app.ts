@@ -12,6 +12,7 @@ import integrationRoutes from "./routes/integrationRoutes";
 import redemptionRoutes from "./routes/redemptionRoutes";
 import testWebhookRoutes from "./routes/testWebhookRoutes";
 import portalRoutes from "./routes/portalRoutes";
+import teamRoutes from "./routes/teamRoutes";
 import * as brandController from "./controllers/brandController";
 import * as pointsController from "./controllers/pointsController";
 import * as redemptionController from "./controllers/redemptionController";
@@ -281,7 +282,7 @@ export function createApp() {
   app.use("/api/brands", webhookRoutes);
   app.use("/api/brands", redemptionRoutes);
   app.use("/api/brands", pointsRoutes);
-  app.use("/api/brands", (await import("./routes/teamRoutes")).default);
+  app.use("/api/brands", teamRoutes);
   app.use("/api/portal", portalRoutes);
   // Note: /api/integration is mounted earlier, before auth middleware
 

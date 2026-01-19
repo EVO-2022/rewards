@@ -309,12 +309,28 @@ export const requireBrandAccess = (requiredRole?: BrandRole) => {
       });
 
       if (!membership) {
+        // Check if brand exists
+        const brandExists = await prisma.brand.findUnique({
+          where: { id: brandId as string },
+        });
+        
         console.error("[requireBrandAccess] No membership found", {
           userId,
           brandId,
+          brandExists: !!brandExists,
           nodeEnv: process.env.NODE_ENV,
+          path: req.path,
+          method: req.method,
         });
-        return res.status(403).json({ error: "Access denied to this brand" });
+        
+        if (!brandExists) {
+          return res.status(404).json({ error: "Brand not found" });
+        }
+        
+        return res.status(403).json({ 
+          error: "Access denied to this brand",
+          details: "You are not a member of this brand. Please contact the brand owner to be added.",
+        });
       }
 
       // Check role requirements

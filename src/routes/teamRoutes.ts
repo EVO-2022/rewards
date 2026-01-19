@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireBrandAccess, syncUser } from "../middleware/auth";
+import { adminAuth, requireBrandAccess } from "../middleware/auth";
 import { validate } from "../middleware/validation";
 import { z } from "zod";
 import { BrandRole } from "@prisma/client";
@@ -20,9 +20,8 @@ const updateMemberSchema = z.object({
   role: z.nativeEnum(BrandRole),
 });
 
-// All routes require authentication and user sync
-router.use(authenticate);
-router.use(syncUser);
+// All routes require authentication (adminAuth handles authenticate + syncUser)
+router.use(adminAuth);
 router.use("/:brandId", requireBrandAccess("MANAGER"));
 
 router.post("/:brandId/members", validate(addMemberSchema), teamController.addTeamMember);

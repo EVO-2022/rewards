@@ -32,7 +32,9 @@ export function AddMemberForm({ brandId }: AddMemberFormProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to add member");
+        const errorMsg = data.error || "Failed to add member";
+        const details = data.details ? ` ${data.details}` : "";
+        throw new Error(errorMsg + details);
       }
 
       setMessage({
