@@ -1,5 +1,5 @@
 import { adminApiFetch } from "@/lib/server/rewardsApi";
-import { BrandMembersResponse } from "@/lib/types";
+import { BrandMembersResponse, Brand } from "@/lib/types";
 import { Card } from "@/components/Card";
 import { PageHeader } from "@/components/PageHeader";
 import { MembersTable } from "@/components/MembersTable";
@@ -10,7 +10,7 @@ import { getFirstBrand } from "@/lib/brandHelper";
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
-  let brand = null;
+  let brand: Brand | null = null;
   let errorMessage: string | null = null;
   let membersData: BrandMembersResponse | null = null;
 
@@ -99,12 +99,15 @@ export default async function MembersPage() {
     );
   }
 
+  // Only show add member form to MANAGER or OWNER
+  const canAddMembers = brand.role === "MANAGER" || brand.role === "OWNER";
+
   return (
     <div>
       <PageHeader title="Members" description={`Brand: ${brand.name}`} />
 
       <Card>
-        <AddMemberForm brandId={brand.id} />
+        {canAddMembers && <AddMemberForm brandId={brand.id} />}
         <div className="mb-4">
           <p className="text-sm text-gray-300">Total members: {membersData.total}</p>
         </div>

@@ -7,15 +7,17 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { brandId: string } }
+  { params }: { params: Promise<{ brandId: string }> }
 ) {
   try {
-    const authData = await auth();
-    if (!authData.userId) {
+    const { getToken } = await auth();
+    const token = await getToken();
+
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { brandId } = params;
+    const { brandId } = await params;
     const body = await request.json();
     const { clerkId, role } = body;
 
